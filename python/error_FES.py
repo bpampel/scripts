@@ -53,7 +53,9 @@ if __name__ == '__main__':
     shiftthreshold = 4*kT
     avgerror = []
 
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 2:
+        os.chdir(sys.argv[1])
+    else:
         os.chdir(input("Base directory of the datasets: "))
 
     # read reference
