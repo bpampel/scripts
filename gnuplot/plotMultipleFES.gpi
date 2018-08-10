@@ -1,0 +1,36 @@
+# Terminal settings
+set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+set output "~/ErrorMultipleFES.pdf"
+set border lw 1.5
+
+# read first argument
+
+
+# Set labels
+set xlabel "Distance (nm)"
+set ylabel "Error of Free Energy (kT)"
+set title "Error of FES for different Basis sets"
+
+# Set plot range and tic options
+set yr [0:2]
+set xr [0.2:0.8]
+set xtics 0.1
+
+# Define colors
+set style line 1 lt 1 lw 3 lc rgb "#e41a1c"
+set style line 2 lt 1 lw 3 lc rgb "#377eb8"
+set style line 3 lt 1 lw 3 lc rgb "#4daf4a"
+set style line 4 lt 1 lw 3 lc rgb "#984ea3"
+set style line 5 lt 1 lw 3 lc rgb "#ff7f00"
+set style line 6 lt 1 lw 3 lc rgb "#ffff33"
+set style line 7 lt 1 lw 3 lc rgb "#a65628"
+
+set key top right horizontal sample 1.
+
+
+Offset=0
+#folders = "/usr/data/pampel/wavelets/1st_test/avg", "/usr/data/pampel/averaging/chebyshev_ord20/avg"
+
+pl sprintf("%s/fes.b1.iter-10000.data", "/usr/data/pampel/wavelets/1st_test/avg") u 1:($5/2.494) w l ls 1 title "Db12 w/o",\
+  sprintf("%s/fes.b1.iter-10000.data", "/usr/data/pampel/wavelets/2nd_linear_interpolation/avg" ) u 1:($5/2.494) w l ls 2 title "Db12 w lin",\
+  sprintf("%s/fes.b1.iter-10000.data", "/usr/data/pampel/averaging/chebyshev_ord20/avg" ) u 1:($5/2.494) w l ls 3 title "Chebyshev 20"

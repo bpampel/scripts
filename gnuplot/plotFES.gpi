@@ -1,0 +1,35 @@
+# Terminal settings
+#set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+#set output "~/AvgFESError.pdf"
+#set border lw 1.5
+
+# go to folder given by first argument
+cd ARG1
+col=ARG2
+print ARG2
+
+# Set labels
+set xlabel "Distance (nm)"
+set ylabel "Average Free Energy (kT)"
+set title ARG1." ".ARG2
+
+# Set plot range and tic options
+set yr [0:1]
+set xr [0.2:0.8]
+set xtics 0.1
+
+# Define colors
+colors = "#e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628"
+set for [i=1:words(colors)] linetype i lw 3 lc rgb word(colors, i)
+
+set key top right horizontal sample 1.
+
+titlefunc(secs) = (int(secs) < 1000 ? secs." ps" : sprintf("%d ns", int(secs)/1000))
+kT = 2.494339
+
+set macros
+columns = "using 1:($".col."/kT)"
+
+
+times = "500 1000 5000 8000 10000"
+pl for [time in times] sprintf("fes.b1.iter-%s.data", time) @columns w l title titlefunc(time)

@@ -1,0 +1,34 @@
+# Terminal settings
+set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+set output "~/FESwithErrors_Chebyshev.pdf"
+set border lw 1.5
+
+# go to folder given by first argument
+cd ARG1
+
+# Set labels
+set xlabel "Distance (nm)"
+set ylabel "Average Free Energy (kT)"
+set title "Db12 with linear interpolation, with errors"
+
+# Set plot range and tic options
+set yr [0:9]
+set xr [0.2:0.8]
+set xtics 0.1
+
+# Define colors
+colors = "#e41a1c #377eb8 #4daf4a #ff7f00 #ffff33 #a65628"
+set for [i=1:words(colors)] linetype i lw 2 lc rgb word(colors, i)
+set style fill transparent  solid 0.3 noborder
+
+set key top right horizontal sample 1.
+
+titlefunc(secs) = (int(secs) < 1000 ? secs." ps" : sprintf("%d ns", int(secs)/1000))
+kT = 2.494339
+
+
+times = "500 1000 5000 10000"
+pl for [time in times]\
+    sprintf("fes.b1.iter-%s.data", time) u 1:(($2-$5)/kT):(($2+$5)/kT) w filledcurves below notitle,\
+   for [i=1:words(times)]\
+    sprintf("fes.b1.iter-%s.data", word(times, i)) u 1:($2/kT) w l lt i title titlefunc(word(times,i))
