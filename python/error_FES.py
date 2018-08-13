@@ -27,14 +27,13 @@ def extract_time(x):
     return int(''.join(i for i in x if i.isdigit())[1:])
 
 
-def safely_create_dir(name):
-    """Backups existing file before creating dir"""
+def backup_if_exists(name):
+    """Cascade of backups with format 'bck.$num.name'"""
     if os.path.exists(name):
         backupnum = 0
         while os.path.exists('bck.'+str(backupnum)+'.'+name):
             backupnum += 1
         os.rename(name, 'bck.'+str(backupnum)+'.'+name)
-    os.mkdir(name)
 
 
 def extract_header(x):
@@ -65,7 +64,7 @@ if __name__ == '__main__':
             ref = np.transpose(np.genfromtxt(referencefile))[1]
             break
         except IOError:
-            referencefile = input("Relative path of the reference FES: ")
+            referencefile = input("Path to the reference FES: ")
 
     # determine regions of interest
     shiftregion = [ref < shiftthreshold]
@@ -73,7 +72,8 @@ if __name__ == '__main__':
     shiftedref = ref - np.average(np.extract(shiftregion, ref))
 
     folders, files, times = get_filenames()
-    safely_create_dir('avg')
+    backup_if_exists('avg')
+    os.mkdir('avg')
 
     for filename in files:
         # set up array of right size from first folder
@@ -109,6 +109,7 @@ if __name__ == '__main__':
                    comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
     # write averaged error to file
+    backup_if_exists('error.txt')
     errorheader = '#! FIELDS time error'
     errordata = np.transpose(np.vstack((times, avgerror)))
     np.savetxt('error.txt', np.asmatrix(errordata), header=errorheader,

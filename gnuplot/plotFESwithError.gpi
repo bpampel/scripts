@@ -1,6 +1,6 @@
 # Terminal settings
 set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
-set output "~/FESwithErrors_Chebyshev.pdf"
+set output "~/FESwithErrors_Db12_wo.pdf"
 set border lw 1.5
 
 # go to folder given by first argument
@@ -9,7 +9,7 @@ cd ARG1
 # Set labels
 set xlabel "Distance (nm)"
 set ylabel "Average Free Energy (kT)"
-set title "Db12 with linear interpolation, with errors"
+set title "Db12 without interpolation, with errors"
 
 # Set plot range and tic options
 set yr [0:9]

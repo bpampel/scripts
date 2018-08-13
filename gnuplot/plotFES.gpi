@@ -1,20 +1,20 @@
-# Terminal settings
-#set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
-#set output "~/AvgFESError.pdf"
-#set border lw 1.5
-
 # go to folder given by first argument
 cd ARG1
 col=ARG2
-print ARG2
+
+# Terminal settings
+set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+set output "../FES_Db12_linear_interpolation.pdf"
+set border lw 1.5
+
 
 # Set labels
 set xlabel "Distance (nm)"
 set ylabel "Average Free Energy (kT)"
-set title ARG1." ".ARG2
+set title "Db12 with linear interpolation"
 
 # Set plot range and tic options
-set yr [0:1]
+set yr [0:8]
 set xr [0.2:0.8]
 set xtics 0.1
 

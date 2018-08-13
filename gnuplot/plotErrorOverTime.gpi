@@ -1,0 +1,29 @@
+# Terminal settings
+cd ARG1
+set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+set output "Error_over_time.pdf"
+set border lw 1.5
+
+# Set labels
+set xlabel "Time (ns)"
+set ylabel "Total Error of Free Energy (kT)"
+set title "Time evolution of total errors"
+
+# Set plot range and tic options
+set yr [0:1.5]
+#set xr [0.2:0.8]
+#set xtics 0.1
+
+# Define colors
+colors = "#e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628"
+set for [i=1:words(colors)] linetype i lw 3 lc rgb word(colors, i)
+
+set key top right vertical sample 1.
+
+kT = 2.494339
+timescale = 1000
+
+dirs = '"3rd_wo_interpolation" "4th_linear_interpolation" "chebyshev" "legendre"'
+titles='"Db12 w/o interpolation" "Db12 linear interpolation" "Chebyshev order 20" "Legendre order 20"'
+pl for [i=1:words(dirs)] sprintf("%s/error.txt", word(dirs,i)) \
+   u ($1/timescale):($2/kT) w l title word(titles,i)

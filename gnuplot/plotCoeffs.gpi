@@ -1,7 +1,7 @@
 # Terminal settings
-set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
-set output "~/Coeffs.pdf"
-set border lw 1.5
+#set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+#set output "~/Coeffs.pdf"
+#set border lw 1.5
 
 # switch to folder from first argument
 cd ARG1
@@ -40,5 +40,5 @@ coefflabel(n) = sprintf("α_{%d}", n)
 coeffdata(n,m)=sprintf("< awk '$1==%d {print $%d}' %s", n, m, filename)
 
 
-pl for [i=2:12:2] coeffdata(i,2) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l ls i title coefflabel(i),\
-  for [i=2:12:2] coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l ls (100*i) notitle
+pl for [i=4:23:4] coeffdata(i,2) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l ls i title coefflabel(i),\
+  for [i=4:23:4] coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l ls (50*i) notitle
