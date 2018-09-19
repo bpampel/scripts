@@ -1,10 +1,10 @@
+# switch to folder from first argument
+cd ARG1
+
 # Terminal settings
 #set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
 #set output "~/Coeffs.pdf"
 #set border lw 1.5
-
-# switch to folder from first argument
-cd ARG1
 
 # Set labels
 set xlabel "Time (ns)"
@@ -13,21 +13,8 @@ set title "Db12 with linear interpolation"
 
 # Set plot range and tic options
 #set xr [0:10]
-
-# Define colors
-set style line 2 lt 1 lw 3 lc rgb "#e41a1c"
-set style line 200 lt 2 lw 1 lc rgb "#e41a1c"
-set style line 4 lt 1 lw 3 lc rgb "#377eb8"
-set style line 400 lt 2 lw 1 lc rgb "#377eb8"
-set style line 6 lt 1 lw 3 lc rgb "#4daf4a"
-set style line 600 lt 2 lw 1 lc rgb "#4daf4a"
-set style line 8 lt 1 lw 3 lc rgb "#984ea3"
-set style line 800 lt 2 lw 1 lc rgb "#984ea3"
-set style line 10 lt 1 lw 3 lc rgb "#ff7f00"
-set style line 1000 lt 2 lw 1 lc rgb "#ff7f00"
-set style line 12 lt 1 lw 3 lc rgb "#ffff33"
-set style line 1200 lt 1 lw 1 lc rgb "#ffff33"
-set style line 7 lt 1 lw 3 lc rgb "#a65628"
+colors = "#e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628"
+set for [i=1:words(colors)] linetype i lw 3 lc rgb word(colors, i)
 
 set key top right horizontal
 
@@ -39,6 +26,14 @@ filename='coeffs.data'
 coefflabel(n) = sprintf("α_{%d}", n)
 coeffdata(n,m)=sprintf("< awk '$1==%d {print $%d}' %s", n, m, filename)
 
+# variables for multiplot
+coeffs_per_plot = 6
+coeffnum = 35
 
-pl for [i=4:23:4] coeffdata(i,2) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l ls i title coefflabel(i),\
-  for [i=4:23:4] coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l ls (50*i) notitle
+do for [p=0:(coeffnum/coeffs_per_plot)]{
+  pl for [i=(p*coeffs_per_plot):((1+p)*coeffs_per_plot)-1]\
+    coeffdata(i,2) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l title coefflabel(i),\
+     for [i=(p*coeffs_per_plot):((1+p)*coeffs_per_plot)-1]\
+      coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l lt (i%coeffs_per_plot+1) lw 1 notitle
+  pause -1
+}
