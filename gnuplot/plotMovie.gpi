@@ -1,0 +1,43 @@
+# Terminal settings
+#set terminal dumb size 100,40 ansi256
+#set terminal gif animate
+#set output "~/gif.gif"
+#set border lw 1.5
+
+# Set labels
+set xlabel "Distance (nm)"
+set ylabel "Free Energy (k_{B}T)"
+
+# Set plot range and tic options
+set yr [0:7.5]
+set xr [0.25:0.75]
+#set xtics 0.1
+set ytics 2
+
+# Define colors
+colors = "#e41a1c #377eb8 #4daf4a #ff7f00 #ffff33 #a65628"
+set for [i=1:words(colors)] linetype i lw 4 lc rgb word(colors, i)
+set style fill transparent  solid 0.3 noborder
+
+#titlefunc(secs) = (int(secs) < 1000 ? secs." ps" : sprintf("%d ns", int(secs)/1000))
+#extract_time(filename) = system(sprintf("sed 's/^[^-]*-\([0-9]*\).*/\1/' %s", filename)
+
+# get all fes files and sort them by time
+cd ARG1
+dirs = '"gaussian/ord20_s003_tdwt/avg" "averaging/chebyshev_ord20/avg" "averaging/legendre_ord20/avg" "wavelets/4th_linear_interpolation/avg"'
+titles='"Gaussians order 20" "Chebyshev order 20" "Legendre order 20" "Wavelets Db12"'
+cd word(dirs,1)
+files = system("ls -v fes*")
+cd "../../../"
+
+
+kT = 2.494339
+
+do for [f in files] {
+  set title f
+  plot for [dnum=1:words(dirs)] sprintf("%s/%s",word(dirs,dnum),f)\
+           u 1:(($2-$5)/kT):(($2+$5)/kT) w filledcurves below notitle,\
+       for [dnum=1:words(dirs)] sprintf("%s/%s",word(dirs,dnum),f)\
+           u 1:($2/kT) w l lt dnum title word(titles,dnum)
+  pause 0.3
+}

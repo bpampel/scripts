@@ -1,0 +1,28 @@
+# get filename from first argument
+filename=ARG1
+
+# Terminal settings
+#set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+#set output "~/Coeffs.pdf"
+#set border lw 1.5
+
+# Set labels
+set xlabel "CV"
+set ylabel "Bias (k_{B}T)"
+
+# Set plot range and tic options
+#set xr [0:10]
+colors = "#e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628"
+set for [i=1:words(colors)] linetype i lw 2 lc rgb word(colors, i)
+
+unset key
+
+kT=2.494339
+
+
+#coefflabel(n) = sprintf("α_{%d}", n)
+#coeffdata(n,m)=sprintf("< awk '$1==%d {print $%d}' %s", n, m, filename)
+
+colnum=system(sprintf("awk 'NF && $1!~/^#/' %s | awk '{print NF; exit}'", filename))
+
+pl for [i=2:colnum] filename u 1:i w l
