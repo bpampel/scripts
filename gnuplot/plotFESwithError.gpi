@@ -1,27 +1,31 @@
-# Terminal settings
-set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
-set output "~/FESwithErrors_Db12_wo.pdf"
-set border lw 1.5
+#!/usr/bin/gnuplot -c
 
-# go to folder given by first argument
-cd ARG1
+# check if dir was given as argument
+directory=ARG1
+if (directory eq "") {
+  print "Error: Please specify directory as first argument"
+  exit
+}
+cd directory
+
+# Terminal settings
+#load "style/pdf.gpi"
+#set output "~/FESwithErrors.pdf"
 
 # Set labels
 set xlabel "Distance (nm)"
-set ylabel "Average Free Energy (kT)"
-set title "Db12 without interpolation, with errors"
+set ylabel "Free Energy (k_{B}T)"
+set notitle
 
 # Set plot range and tic options
-set yr [0:9]
-set xr [0.2:0.8]
-set xtics 0.1
+set yr [0:7]
+set xr [0.25:0.75]
+#set xtics 0.1
+set ytics 2
 
-# Define colors
-colors = "#e41a1c #377eb8 #4daf4a #ff7f00 #ffff33 #a65628"
-set for [i=1:words(colors)] linetype i lw 2 lc rgb word(colors, i)
-set style fill transparent  solid 0.3 noborder
+set key top right vertical sample 1.
 
-set key top right horizontal sample 1.
+set style fill transparent solid 0.3 noborder
 
 titlefunc(secs) = (int(secs) < 1000 ? secs." ps" : sprintf("%d ns", int(secs)/1000))
 kT = 2.494339

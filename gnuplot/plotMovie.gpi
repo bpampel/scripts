@@ -1,5 +1,8 @@
+#!/usr/bin/gnuplot -c
+
 # Terminal settings
-#set terminal dumb size 100,40 ansi256
+load "style/colors.gpi"
+#set terminal dumb size 100,40
 #set terminal gif animate
 #set output "~/gif.gif"
 #set border lw 1.5
@@ -15,8 +18,6 @@ set xr [0.25:0.75]
 set ytics 2
 
 # Define colors
-colors = "#e41a1c #377eb8 #4daf4a #ff7f00 #ffff33 #a65628"
-set for [i=1:words(colors)] linetype i lw 4 lc rgb word(colors, i)
 set style fill transparent  solid 0.3 noborder
 
 #titlefunc(secs) = (int(secs) < 1000 ? secs." ps" : sprintf("%d ns", int(secs)/1000))
@@ -24,11 +25,13 @@ set style fill transparent  solid 0.3 noborder
 
 # get all fes files and sort them by time
 cd ARG1
-dirs = '"gaussian/ord20_s003_tdwt/avg" "averaging/chebyshev_ord20/avg" "averaging/legendre_ord20/avg" "wavelets/4th_linear_interpolation/avg"'
-titles='"Gaussians order 20" "Chebyshev order 20" "Legendre order 20" "Wavelets Db12"'
+#dirs = '"gaussian/ord20_s003_tdwt/avg" "averaging/chebyshev_ord20/avg" "averaging/legendre_ord20/avg" "wavelets/4th_linear_interpolation/avg"'
+#titles='"Gaussians order 20" "Chebyshev order 20" "Legendre order 20" "Wavelets Db12"'
+dirs = '"4th_linear_interpolation/avg" "6th_fixed_more_bfs/avg"'
+titles = '"original linear" "more BFs"'
 cd word(dirs,1)
 files = system("ls -v fes*")
-cd "../../../"
+cd "../../"
 
 
 kT = 2.494339
@@ -38,6 +41,7 @@ do for [f in files] {
   plot for [dnum=1:words(dirs)] sprintf("%s/%s",word(dirs,dnum),f)\
            u 1:(($2-$5)/kT):(($2+$5)/kT) w filledcurves below notitle,\
        for [dnum=1:words(dirs)] sprintf("%s/%s",word(dirs,dnum),f)\
-           u 1:($2/kT) w l lt dnum title word(titles,dnum)
-  pause 0.3
+           u 1:($2/kT) w l lt dnum title word(titles,dnum),\
+       '../fes.ref.dat' u 1:($2/kT) w l
+  pause 0.2
 }

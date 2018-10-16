@@ -1,0 +1,1 @@
+set terminal pngcairo size 1000,700 enhanced font 'Verdana,18'

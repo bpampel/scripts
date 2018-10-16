@@ -1,0 +1,4 @@
+#!/usr/bin/gnuplot
+# scheme is from color brewer http://colorbrewer2.org/?type=qualitative&scheme=Set1&n=9
+colors = "#e41a1c #377eb8 #4daf4a #ff7f00 #984ea3 #ffff33 #a65628 #f781bf #999999"
+set for [i=1:words(colors)] linetype i lw 3 lc rgb word(colors, i)

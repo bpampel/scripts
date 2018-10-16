@@ -1,21 +1,25 @@
-# Terminal settings
-#set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
-#set output "plotCVs.pdf"
-#set border lw 1.5
-cd ARG1
+#!/usr/bin/gnuplot
+
+# check if dir was given as argument
+directory=ARG1
+if (directory eq "") {
+  print "Error: Please specify directory as first argument"
+  exit
+}
+cd directory
+
+# Style settings
+#load "style/pdf.gpi"
+#set output "~/Coeffs.pdf"
 
 # Set labels
-#set xlabel "Time (ns)"
-#set ylabel "Coefficients (kJ/mol)"
+set xlabel "Time (ns)"
+set ylabel "Coefficients (kJ/mol)"
 
 # Set plot range and tic options
-#set yr [-50:40]
+set yr [-50:40]
 
-# Define colors
-colors = "#e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628"
-set for [i=1:words(colors)] linetype i lw 3 lc rgb word(colors, i)
-
-# function that reads CV definition from FILE header
+# get CV definition from FILE header
 cvtitle(i) = system("head -1 ".FILE." | awk '{print $".(i+2)."}'")
 
 FILE='COLVAR'

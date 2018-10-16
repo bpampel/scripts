@@ -1,0 +1,7 @@
+set terminal svg size 1000,400 dynamic font "Cantarell,18" enhanced
+#set terminal svg size 600,400 dynamic font "Cantarell,14" enhanced
+set border lw 1.5
+
+load "colors.gpi"
+
+set key sample 1. top right spacing 1.1

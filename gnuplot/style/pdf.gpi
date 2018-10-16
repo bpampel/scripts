@@ -1,0 +1,6 @@
+set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+set border lw 1.5
+
+load "colors.gpi"
+
+set key sample 1. top right spacing
