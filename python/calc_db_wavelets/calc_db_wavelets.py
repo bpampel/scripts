@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-Calculate the filter coefficients of Daubechies Wavelets
+Calculate the scaling function and its derivative for Daubechies Wavelets
 '''
 
 import sys
@@ -8,12 +8,13 @@ from numpy.polynomial import polynomial as poly
 import numpy as np
 from scipy.special import comb
 
+def db_filter_coeffs(p, norm=1):
+    ''' Calculate the filter coefficients for Daubechies Wavelets
 
-def calc_filter_coeffs(p, norm=1):
-    '''Calculate the filter coefficients for Daubechies Wavelets
-       c.f. Strang, Nguyen - "Wavelets and Filters" ch. 5.5
-       p is the number of vanishing moments
-       norm specifies the euclidean norm of the final coefficients'''
+    c.f. Strang, Nguyen - "Wavelets and Filters" ch. 5.5
+    :param p: number of vanishing moments
+    :param norm: specifies the euclidean norm of the final coefficients
+    '''
     if p < 1:
         raise ValueError("The order of the Wavelets must be at least 1")
     if p > 34:
@@ -32,89 +33,123 @@ def calc_filter_coeffs(p, norm=1):
     return C_z[::-1]
 
 
-def setup_m_matrices(h):
-    '''Sets up and returns the matrices m0 and m1 (in a list)
-    that are needed to get the values of the scaling function
-    at integer points'''
+def highpass_from_lowpass(h):
+    '''Returns the lowpass filter coefficients g from the highpass filter
+       coefficients h'''
+    alternating_sign_list = [(1 if i%2 == 0 else -1) for i, _ in enumerate(h)]
+    g = h[::-1] * alternating_sign_list
+    return g
+
+
+def m_matrices(h):
+    '''Sets up and returns the matrices M0 and M1 (in a list)
+       that are needed to get the values of the scaling function
+       at integer points.
+       The sum over the filter coefficients h should equal 1.
+       Works also with the lowpass filter to calculate the wavelet.
+    '''
     # initialize matrices to zero
     n = len(h)-1
-    m0 = np.zeros((n, n), dtype=np.float64)
-    m1 = np.zeros((n, n), dtype=np.float64)
+    M0 = np.zeros((n, n), dtype=np.float64)
+    M1 = np.zeros((n, n), dtype=np.float64)
     # 'c style' but better for transfering anyway
     for i in range(n):
         for j in range(n):
             if 0 <= 2*i-j <= n:
-                m0[i,j] = 2*h[2*i -j]
+                M0[i,j] = 2*h[2*i -j]
             if -1 <= 2*i-j <= n - 1:
-                m1[i,j] = 2*h[2*i -j+1]
-    print("m0:\n{}\n".format(m0/2))
-    print("m1:\n{}\n".format(m1/2))
-    return [m0, m1]
+                M1[i,j] = 2*h[2*i -j+1]
+    # print("M0:\n{}\n".format(M0))
+    # print("M1:\n{}\n".format(m1/2))
+    return [M0, M1]
 
 
-def calc_scaling_function(p, d=8):
-    '''Calculate the scaling function Phi(x) of Daubiches Wavelets
-       for a given order p with 2^d values between each integer
+def normalize_eigenvector(eigvec, derivnum):
+    '''Normalize the eigenvector to retrieve the values of phi (or its
+       derivatives) at the integer values.'''
+    weighted_sum = np.sum(eigvec * ((-np.arange(len(eigvec))) ** derivnum))
+    # print(weighted_sum)
+    norm = np.math.factorial(derivnum) / weighted_sum
+    # print(norm)
+    return eigvec * norm
+
+
+def db_wavelet(p, d=6):
+    '''Calculate the scaling and wavelet function for Daubechies Wavelets
+
+    :param p: order p of (equivalent to the number of vanishing moments)
+    :param d: recursion number. returned array will have 2**d values per integer
+    :return: (x, phi, psi) where phi is the scaling and psi the wavelet function
     '''
+    n = 2*p - 1
     h = calc_filter_coeffs(p, 1/np.sqrt(2))
-    print("h: {}\n".format(h))
-    m = setup_m_matrices(h)
-    # get eigenvalues of m0 and round them (because of precision errors)
-    m0_eigvals, m0_eigvecs = np.linalg.eig(m[0])
-    m0_eigvals = [round(x,8) for x in m0_eigvals]
-    intvalues = m0_eigvecs[:,m0_eigvals.index(1)]
-    # This could be simplified: We already know that 1 is an eigenvalue
-    # --> simply find the corresponding vector
+    g = calc_highpass_from_lowpass(h)
+    # print("h: {}\n".format(h))
+    H = setup_m_matrices(h)
+    G = setup_m_matrices(g)
 
-    intsum = np.sum(intvalues)
-    if intsum < 0:
-        intvalues *= -1
-        intsum *= -1
-    intvalues /= intsum
+    step = 1 << d # number of values between integers
+    # set up arrays of values to be calculated
+    phi = np.empty((p, (2*p-1) * step), dtype=np.float64)
+    psi = np.empty((p, (2*p-1) * step), dtype=np.float64)
 
-    print("Integer_phi: {}".format(intvalues))
-    print("Multiplication test: {}".format((m[0] @ intvalues) - intvalues))
+    # get eigenvalues of matrices
+    H0_eigvals, H0_eigvecs = np.linalg.eig(H[0])
+    # This could be simplified: We already know the eigenvalues
+    # --> simply find the corresponding vectors
 
-    step = 1 << d
-    # set up array of values to be calculated
-    phi = np.zeros((2*p-1) * step, dtype=np.float64)
+    # prefix 'dy' is for the dyadic values
+    dy_eigval_indices = [np.argmin(np.absolute(H0_eigvals - 2**(-j))) for j in range(p)]
+    values_at_int = np.empty((p,n), dtype=np.float64)
+    for j, k in enumerate(dy_eigval_indices):
+        # j is order of derivative (0:p-1), k the position of the corresponding eigenvector
+        values_at_int[j] = normalize_eigenvector(H0_eigvecs[:,k], j)
 
-    # fill first two datasets by hand
-    binarydict = {'0': intvalues}
-    binarydict['1'] = m[1] @ intvalues
-    phi[::step] = binarydict['0']
-    phi[step >> 1::step] = binarydict['1']
+        # print("Deriv {}: (factorial check: {})\n{}\n".format(
+            # j, np.sum((-np.arange(n))**j* values_at_int[j]),
+            # values_at_int[j])
+             # )
 
-    oldbits = ['1']
-    for depth in range(2, d + 1):
-        # is there a nicer way?
-        newbits = ['%d%s' % (new, old) for new in [0, 1] for old in oldbits]
-        for binary in newbits:
-            start = int(binary, 2) * step>>depth
-            firstbit = int(binary[0])
-            binarydict[binary] = m[firstbit] @ binarydict[binary[1:]]
-            phi[start::step] = binarydict[binary]
-        oldbits = newbits
+        # multiply matrices with factor (less flops)
+        factor = 1 << j
+        H_temp = [factor * H[0], factor * H[1]]
+        G_temp = [factor * G[0], factor * G[1]]
+
+        # fill first two datasets by hand
+        binarydict = {'0': values_at_int[j]}
+        binarydict['1'] = H_temp[1] @ values_at_int[j]
+        phi[j][::step] = binarydict['0']
+        phi[j][step >> 1::step] = binarydict['1']
+        psi[j][::step] = G_temp[0] @ values_at_int[j]
+        psi[j][step >> 1::step] = G_temp[1] @ values_at_int[j]
+        if j == 0:
+            print("Values at ints: \n{}\n".format(G_temp[0] @ values_at_int[j]))
+
+        oldbits = ['1']
+        for depth in range(2, d + 1):
+            # is there a nicer way?
+            newbits = ['%d%s' % (new, old) for new in [0, 1] for old in oldbits]
+            for binary in newbits:
+                start = int(binary, 2) * step>>depth
+                firstbit = int(binary[0])
+                binarydict[binary] = H_temp[firstbit] @ binarydict[binary[1:]]
+                phi[j][start::step] = binarydict[binary]
+                psi[j][start::step] = G_temp[firstbit] @ binarydict[binary[1:]]
+            oldbits = newbits
+
+    # corresponding x values
     x = np.arange(0, 2*p - 1, 1 / step)
 
-    return x, phi
+    return (np.vstack((x, phi)), np.vstack((x, psi)))
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         order = int(input("Please specify the order of the Daubechies Wavelets to "
-                      "be calculated (1-10):\n"))
+                          "be calculated (1-34):\n"))
     else:
         order = int(sys.argv[1])
 
-    scaling_func = calc_scaling_function(order)
-    # test it by comparison with the scipy implementation
-    # from scipy.signal import wavelets as wv
-    # scipyref = wv.cascade(wv.daub(order), 8)
-    # differences = (scaling_func[0] - scipyref[0], scaling_func[1] - scipyref[1])
-    # print("Max Delta_x: {}\nMax Delta_Phi: {}\n".format(max(differences[0]), max(differences[1])))
-    np.savetxt("Phi_{}.dat".format(order), np.transpose(np.asmatrix(scaling_func)))
-
-
-else:
-    exit(-1)
+    scaling_func, wavelet = calc_scaling_function(order, 6)
+    np.savetxt("Phi_{}.dat".format(order), np.transpose(scaling_func))
+    np.savetxt("Psi_{}.dat".format(order), np.transpose(wavelet))
