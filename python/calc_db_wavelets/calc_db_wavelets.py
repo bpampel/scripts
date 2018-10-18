@@ -122,8 +122,8 @@ def db_wavelet(p, d=6):
         phi[j][step >> 1::step] = binarydict['1']
         psi[j][::step] = G_temp[0] @ values_at_int[j]
         psi[j][step >> 1::step] = G_temp[1] @ values_at_int[j]
-        if j == 0:
-            print("Values at ints: \n{}\n".format(G_temp[0] @ values_at_int[j]))
+        # if j == 0:
+            # print("Values at ints: \n{}\n".format(G_temp[0] @ values_at_int[j]))
 
         oldbits = ['1']
         for depth in range(2, d + 1):
