@@ -82,11 +82,11 @@ def db_wavelet(p, d=6):
     :return: (x, phi, psi) where phi is the scaling and psi the wavelet function
     '''
     n = 2*p - 1
-    h = calc_filter_coeffs(p, 1/np.sqrt(2))
-    g = calc_highpass_from_lowpass(h)
+    h = db_filter_coeffs(p, 1/np.sqrt(2))
+    g = highpass_from_lowpass(h)
     # print("h: {}\n".format(h))
-    H = setup_m_matrices(h)
-    G = setup_m_matrices(g)
+    H = m_matrices(h)
+    G = m_matrices(g)
 
     step = 1 << d # number of values between integers
     # set up arrays of values to be calculated
@@ -140,7 +140,7 @@ def db_wavelet(p, d=6):
     # corresponding x values
     x = np.arange(0, 2*p - 1, 1 / step)
 
-    return (np.vstack((x, phi)), np.vstack((x, psi)))
+    return (x, phi, psi)
 
 
 if __name__ == '__main__':
@@ -150,6 +150,6 @@ if __name__ == '__main__':
     else:
         order = int(sys.argv[1])
 
-    scaling_func, wavelet = calc_scaling_function(order, 6)
-    np.savetxt("Phi_{}.dat".format(order), np.transpose(scaling_func))
-    np.savetxt("Psi_{}.dat".format(order), np.transpose(wavelet))
+    x, scaling_func, wavelet = db_wavelet(order, 6)
+    np.savetxt("Phi_{}.dat".format(order), np.transpose(np.vstack((x,scaling_func))))
+    np.savetxt("Psi_{}.dat".format(order), np.transpose(np.vstack((x,wavelet))))
