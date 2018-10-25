@@ -5,14 +5,14 @@ plumedfile='/home/theorie/pampel/scripts/plumed/reweight_fes/plumed.dat'
 # first create the basic structure
 rootdir=$1
 cd $rootdir
-echo 'working in '`pwd`
+echo 'Currently working in '`pwd`
+filenum=$(ls fes* | wc -l) # just to monitor progress
+counter=0
 mkdir 'reweighting'
 cd 'reweighting'
-for time in {0..20000..100}
+for fes in $( ls ../fes* )
 do
-  # to show progress because it takes a bit
-  progress=`expr $time \* 100 \/ 20000`
-  echo -ne $progress' % done\r'
+  time=$(echo $fes | sed -s 's/\([0-9]*\).*-\([0-9]*\).*/\2/')
   # create dir and move files
   mkdir $time
   cd $time
@@ -21,9 +21,11 @@ do
   cp $plumedfile .
   # run plumed and move output to parent directory
   plumed --no-mpi driver --noatoms > /dev/null
-  filename='fes.b1.iter-'$time'.data'
-  cp 'fes' '../'$filename
+  cp 'fes' $fes # variable already contains ../
   cd ../
   rm -rf $time
+  # show progress
+  ((counter+=1))
+  echo -ne $((counter * 100 / filenum)) '% done\r'
 done
 echo ''
