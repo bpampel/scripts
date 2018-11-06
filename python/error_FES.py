@@ -71,7 +71,8 @@ if __name__ == '__main__':
     # determine regions of interest
     shiftregion = [ref < shiftthreshold]
     errorregion = [ref < 2*shiftthreshold]
-    shiftedref = ref - np.average(np.extract(shiftregion, ref))
+    refshift = np.average(np.extract(shiftregion, ref))
+    ref -= refshift
 
     folders, files, times = get_filenames()
     backup_if_exists('avg')
@@ -94,8 +95,8 @@ if __name__ == '__main__':
         avgstddev.append(np.average(np.extract(errorregion, stddev)))
 
         # calculate bias
-        shiftedavgdata = avgdata - np.average(np.extract(shiftregion, avgdata))
-        bias = np.absolute(shiftedavgdata - shiftedref)
+        datashift = np.average(np.extract(shiftregion, avgdata))
+        bias = np.absolute(avgdata - datashift - ref)
         avgbias.append(np.average(np.extract(errorregion, bias)))
 
         # add to recieve total error
@@ -105,6 +106,7 @@ if __name__ == '__main__':
         # copy header from one infile and add fields
         fileheader = extract_header(folders[0]+filename)
         fileheader[0] = fileheader[0][:-1] + ' stddev bias error\n'
+        fileheader.append('#! shift ' + str(refshift + datashift) + '\n')
         fileheader = ''.join(fileheader)[:-1]
 
         # write data of current time to file
@@ -119,5 +121,5 @@ if __name__ == '__main__':
     np.savetxt('error.txt', np.asmatrix(errordata), header=errorheader,
                comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
-else:
-    exit(-1)
+# else:
+    # exit(-1)
