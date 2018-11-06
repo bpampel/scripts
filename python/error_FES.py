@@ -51,6 +51,8 @@ if __name__ == '__main__':
     kT = 2.49339  # 300K
     shiftthreshold = 4*kT
     avgerror = []
+    avgstddev = []
+    avgbias = []
 
     if len(sys.argv) == 2:
         os.chdir(sys.argv[1])
@@ -89,10 +91,12 @@ if __name__ == '__main__':
         # all data is read, calculate averages and std dev
         avgdata = np.average(data, axis=0)
         stddev = np.std(data, axis=0, ddof=1, dtype=np.float64)
+        avgstddev.append(np.average(np.extract(errorregion, stddev)))
 
         # calculate bias
         shiftedavgdata = avgdata - np.average(np.extract(shiftregion, avgdata))
         bias = np.absolute(shiftedavgdata - shiftedref)
+        avgbias.append(np.average(np.extract(errorregion, bias)))
 
         # add to recieve total error
         error = np.sqrt(stddev**2 + bias**2)
@@ -110,8 +114,8 @@ if __name__ == '__main__':
 
     # write averaged error to file
     backup_if_exists('error.txt')
-    errorheader = '#! FIELDS time error'
-    errordata = np.transpose(np.vstack((times, avgerror)))
+    errorheader = '#! FIELDS time total_error stddev bias'
+    errordata = np.transpose(np.vstack((times, avgerror, avgstddev, avgbias)))
     np.savetxt('error.txt', np.asmatrix(errordata), header=errorheader,
                comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
