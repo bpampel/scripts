@@ -72,7 +72,6 @@ if __name__ == '__main__':
     shiftregion = [ref < shiftthreshold]
     errorregion = [ref < 2*shiftthreshold]
     refshift = np.average(np.extract(shiftregion, ref))
-    ref -= refshift
 
     folders, files, times = get_filenames()
     backup_if_exists('avg')
@@ -89,14 +88,16 @@ if __name__ == '__main__':
         for j in range(1, len(folders)):
             data[j] = np.transpose(np.genfromtxt(folders[j]+filename))[1]
 
-        # all data is read, calculate averages and std dev
+        # all data is read, shift data according to ref
         avgdata = np.average(data, axis=0)
         stddev = np.std(data, axis=0, ddof=1, dtype=np.float64)
         avgstddev.append(np.average(np.extract(errorregion, stddev)))
 
-        # calculate bias
         datashift = np.average(np.extract(shiftregion, avgdata))
-        bias = np.absolute(avgdata - datashift - ref)
+        avgdata = avgdata - datashift + refshift
+
+        # calculate bias
+        bias = np.absolute(avgdata - ref)
         avgbias.append(np.average(np.extract(errorregion, bias)))
 
         # add to recieve total error
@@ -106,7 +107,7 @@ if __name__ == '__main__':
         # copy header from one infile and add fields
         fileheader = extract_header(folders[0]+filename)
         fileheader[0] = fileheader[0][:-1] + ' stddev bias error\n'
-        fileheader.append('#! shift ' + str(refshift + datashift) + '\n')
+        # fileheader.append('#! shift ' + str(refshift + datashift) + '\n')
         fileheader = ''.join(fileheader)[:-1]
 
         # write data of current time to file
