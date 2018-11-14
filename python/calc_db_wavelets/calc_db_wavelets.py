@@ -8,12 +8,13 @@ from numpy.polynomial import polynomial as poly
 import numpy as np
 from scipy.special import comb
 
-def db_filter_coeffs(p, norm=1):
+def db_filter_coeffs(p, norm=1, linphase=False):
     ''' Calculate the filter coefficients for Daubechies Wavelets
 
     c.f. Strang, Nguyen - "Wavelets and Filters" ch. 5.5
     :param p: number of vanishing moments
     :param norm: specifies the euclidean norm of the final coefficients
+    :param linphase: whether to use the "most linear phase" approximation or minimal phase
     '''
     if p < 1:
         raise ValueError("The order of the Wavelets must be at least 1")
@@ -22,13 +23,29 @@ def db_filter_coeffs(p, norm=1):
     if norm <= 0:
         raise ValueError("The norm must be larger than 0")
     # find roots of the defining polynomial B(y)
-    B_y = [comb(p + i - 1, i, exact=1) for i in range(p)]
+    B_y = [comb(p + i - 1, i, exact=True) for i in range(p)]
     y = poly.polyroots(B_y)
     # calculate the roots of C(z) from the roots y via a quadratic formula
-    z = [[root for root in poly.polyroots([1, 4*yi - 2, 1]) if abs(root) < 1][0] for yi in y]
+    roots = [poly.polyroots([1, 4*yi - 2, 1]) for yi in y]
+    if not linphase:
+        # take the ones inside the unit circle
+        z = [root for root in roots if np.abs(root) < 1]
+    else:
+        # sort roots according to Kateb & Lemarie-Rieusset (1995)
+        imaglargerzero = list(filter(lambda root: np.imag(root[0]) >= 0, roots))
+        imagsmallerzero = list(filter(lambda root: np.imag(root[0]) < 0, roots))
+        imaglargerzero.sort(key=lambda x: np.absolute(x[0]))
+        imagsmallerzero.sort(key=lambda x: np.absolute(x[0]), reverse=True)
+        sortedroots = imaglargerzero + imagsmallerzero
+        # take them in some alternating manner
+        z = []
+        for i, root in enumerate(sortedroots):
+            takelarger = ( (i+1)%4 <= 1 )
+            z.append(root[takelarger*1])
+
     z += [-1]*p
     # put together the polynomial C(z) and normalize the coefficients
-    C_z = np.real(poly.polyfromroots(z))
+    C_z = np.real(poly.polyfromroots(z)) # imaginary part may be non-zero because of rounding errors
     C_z *= norm * np.sqrt(2) / sum(C_z)
     return C_z[::-1]
 
