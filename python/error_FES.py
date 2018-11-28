@@ -54,7 +54,7 @@ def get_nbins(header):
 
 def write_sliced_to_file(data, nbins, filename, header):
     """Writes the 2d data to file including a newline after every row"""
-    data = data.T.reshape(*nbins, len(data[0])) # split into rows
+    data = data.reshape(*nbins, len(data[0])) # split into rows
     with open(filename, 'w') as outfile:
         outfile.write(header)
         for row in data[:-1]:
