@@ -49,15 +49,20 @@ def extract_header(x):
 
 def get_nbins(header):
     """Extract the number of bins per direction from file header"""
+    # watch out! If the corresponding CV label contains a number this fails
     return [extract_digits(s) for s in header if "nbin" in s]
 
 def write_sliced_to_file(data, nbins, filename, header):
     """Writes the 2d data to file including a newline after every row"""
-    with file(filename, 'w') as outfile:
-        np.savetxt('avg/'+filename, np.asmatrix(data), header=header,
-                   comments='', fmt='%1.16f', delimiter=' ', newline='\n')
-    np
-    return
+    data = data.T.reshape(*nbins, len(data[0])) # split into rows
+    with open(filename, 'w') as outfile:
+        outfile.write(header)
+        for row in data[:-1]:
+            np.savetxt(outfile, row, comments='', fmt='%1.16f',
+                       delimiter=' ', newline='\n')
+            outfile.write('\n')
+        np.savetxt(outfile, data[-1], comments='', fmt='%1.16f',
+                   delimiter=' ', newline='\n')
 
 
 if __name__ == '__main__':
@@ -87,7 +92,6 @@ if __name__ == '__main__':
     shiftregion = [ref < shiftthreshold]
     errorregion = [ref < 2*shiftthreshold]
     refshift = np.average(np.extract(shiftregion, ref))
-    refnbins = get_nbins(extract_header(referencefile))
 
     folders, files, times = get_filenames()
     backup_if_exists('avg')
@@ -122,9 +126,7 @@ if __name__ == '__main__':
 
         # copy header from one infile and check if bins match
         fileheader = extract_header(folders[0]+filename)
-        xbins = get_nbins(fileheader)[0]
-        if refxbins != xbins:
-            raise ValueError("Number of bins do not match between files and reference")
+        nbins = get_nbins(fileheader)
 
         # modify header
         fileheader[0] = fileheader[0][:-1] + ' stddev bias error\n'
@@ -132,8 +134,7 @@ if __name__ == '__main__':
 
         # write data of current time to file
         outdata = np.vstack((colvar, avgdata, stddev, bias, error)).T
-        np.savetxt('avg/'+filename, np.asmatrix(outdata), header=fileheader,
-                   comments='', fmt='%1.16f', delimiter=' ', newline='\n')
+        write_sliced_to_file(outdata, nbins, 'avg/'+filename, fileheader)
 
     # write averaged error to file
     backup_if_exists('error.txt')
