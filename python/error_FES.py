@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
         # modify header
         fileheader[0] = fileheader[0][:-1] + ' stddev bias error\n'
-        fileheader = ''.join(fileheader)[:-1]
+        fileheader = ''.join(fileheader)
 
         # write data of current time to file
         outdata = np.vstack((colvar, avgdata, stddev, bias, error)).T
