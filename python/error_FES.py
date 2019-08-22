@@ -48,13 +48,17 @@ def extract_header(x):
 
 if __name__ == '__main__':
     # define some constants and values
-    kT = 2.49339  # 300K
+    kT = 1 # 300K
     shift_threshold = 4 * kT
     error_threshold = 2 * shift_threshold
     custom_cv_range = [0.0, 0.7]
     avgerror = []
     avgstddev = []
     avgbias = []
+    avgnewbias = []
+    avgstddevrms = []
+    avgbiasrms = []
+    avgnewbiasrms = []
     avgfolder = 'avg_new'
     errorfile = 'error_new.txt'
 
@@ -64,7 +68,7 @@ if __name__ == '__main__':
         os.chdir(input("Base directory of the datasets: "))
 
     # read reference
-    referencefile = '../fes.ref.data'
+    referencefile = '../pot.ref.data'
     while True:
         try:
             colvar, ref = np.transpose(np.genfromtxt(referencefile))
@@ -73,9 +77,11 @@ if __name__ == '__main__':
             referencefile = input("Path to the reference FES: ")
 
     # determine regions of interest and create arrays of booleans
-    colvar_region = np.array([colvar >= custom_cv_range[0]]) & np.array([colvar <= custom_cv_range[1]])
+    # colvar_region = np.array([colvar >= custom_cv_range[0]]) & np.array([colvar <= custom_cv_range[1]])
+    colvar_region = True # manual overwrite to include all
     shift_region = np.array([ref < shift_threshold]) & colvar_region
     error_region = np.array([ref < error_threshold]) & colvar_region
+    errornorm = 1.0 / len(error_region)
     refshift = np.average(np.extract(shift_region, ref))
 
     folders, files, times = get_filenames()
@@ -90,17 +96,35 @@ if __name__ == '__main__':
         for j in range(0, len(folders)):
             data[j] = np.transpose(np.genfromtxt(folders[j]+filename))[1]
 
-        # all data is read, shift data according to ref
+        # all data is read, calculate error measures
         avgdata = np.average(data, axis=0)
         stddev = np.std(data, axis=0, ddof=1, dtype=np.float64)
         avgstddev.append(np.average(np.extract(error_region, stddev)))
 
-        datashift = np.average(np.extract(shift_region, avgdata))
-        avgdata = avgdata - datashift + refshift
+        avgshift = np.average(np.extract(shift_region, avgdata))
+        avgdata = avgdata - avgshift + refshift
 
         # calculate bias
         bias = np.absolute(avgdata - ref)
         avgbias.append(np.average(np.extract(error_region, bias)))
+
+
+        # new part from here: bias similar to branduardi (stddev w/r to reference)
+        shifteddata = []
+        for dataset in data:
+            datashift = np.average(np.extract(shift_region, dataset))
+            shifteddata.append(dataset + refshift - datashift)
+
+        newbias = np.sqrt(np.average((shifteddata - ref)**2, axis=0))
+        avgnewbias.append(np.average(np.extract(error_region, newbias)))
+
+        # other experiment: root mean square the CV space instead of just averaging
+        avgstddevrms.append(np.sqrt(errornorm * np.average(np.extract(error_region, stddev)**2)))
+        avgbiasrms.append(np.sqrt(errornorm * np.average(np.extract(error_region, bias)**2)))
+        avgnewbiasrms.append(np.sqrt(errornorm * np.average(np.extract(error_region, newbias)**2)))
+
+
+
 
         # add to recieve total error
         error = np.sqrt(stddev**2 + bias**2)
@@ -108,19 +132,19 @@ if __name__ == '__main__':
 
         # copy header from one infile and add fields
         fileheader = extract_header(folders[0]+filename)
-        fileheader[0] = fileheader[0][:-1] + ' stddev bias error\n'
+        fileheader[0] = fileheader[0][:-1] + ' stddev bias newbias error\n'
         # fileheader.append('#! shift ' + str(refshift + datashift) + '\n')
         fileheader = ''.join(fileheader)[:-1]
 
         # write data of current time to file
-        outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, error)))
+        outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, newbias, error)))
         np.savetxt(avgfolder+ os.path.sep + filename, np.asmatrix(outdata), header=fileheader,
                    comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
     # write averaged error to file
     backup_if_exists(errorfile)
-    errorheader = '#! FIELDS time total_error stddev bias'
-    errordata = np.transpose(np.vstack((times, avgerror, avgstddev, avgbias)))
+    errorheader = '#! FIELDS time total_error stddev bias newbias stddevrms biasrms newbiasrms'
+    errordata = np.transpose(np.vstack((times, avgerror, avgstddev, avgbias, avgnewbias, avgstddevrms, avgbiasrms, avgnewbiasrms)))
     np.savetxt(errorfile, np.asmatrix(errordata), header=errorheader,
                comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
