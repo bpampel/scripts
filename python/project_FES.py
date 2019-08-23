@@ -50,26 +50,27 @@ if __name__ == '__main__':
     args = parse_args()
 
     fes = np.genfromtxt(args.filename)
-    # beta = 1.0 / args.kT
 
     num_dim1 = np.where(fes[:, 0] == fes[0, 0])[0][1] # via periodicity
     num_dim2 = int(fes.shape[0] / num_dim1)
+
+    # get CV values of correct dimension
+    if args.dim == 1:
+        cv_values = fes[:num_dim1, 0]
+    elif args.dim == 2:
+        cv_values = fes[::num_dim1, 1]
+    else:
+        raise ValueError("Dimension must be either 1 or 2")
+
     # put values in matrix, dim2 is in the rows (because fes from plumed is column major)
     fesmatrix = fes[:, 2].reshape(num_dim2, num_dim1)
     probabilities = np.exp(- fesmatrix / float(args.kT))
 
-    # get CV values of correct dimension and transpose matrix if needed
-    if args.dim == 0:
-        cv_values = fes[::num_dim1, 1]
-    elif args.dim == 1:
-        probabilities = probabilities.T
-        cv_values = fes[:num_dim1, 0]
-    else:
-        raise ValueError("Dimension must be either 0 or 1")
-
     cv_delta = cv_values[1] - cv_values[0]
-    projected_probabilities = np.trapz(probabilities, axis=args.dim, dx=cv_delta)
+    projected_probabilities = np.trapz(probabilities, axis=args.dim-1, dx=cv_delta)
     projected_fes = - args.kT * np.log(projected_probabilities)
+    projected_fes -= np.min(projected_fes)
+
     np.savetxt(args.outfile, np.asmatrix(np.vstack((cv_values, projected_fes)).T),
                fmt='%1.16f', delimiter=' ', newline='\n')
 
