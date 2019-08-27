@@ -64,8 +64,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     fes = np.genfromtxt(args.filename)
-    fmt = nfmt.NumberFmt()
-    fmt.parse(get_number_string(args.filename))
+    fmt = nfmt.NumberFmt(get_number_string(args.filename))
 
     num_dim1 = np.where(fes[:, 0] == fes[0, 0])[0][1] # via periodicity
     num_dim2 = int(fes.shape[0] / num_dim1)
