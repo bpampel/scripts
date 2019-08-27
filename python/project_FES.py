@@ -7,6 +7,7 @@ Currently only 2d -> 1d
 import argparse
 from os import path
 import numpy as np
+from helpers import plumed_header as plmdheader
 from helpers import number_format as nfmt
 
 
@@ -37,18 +38,21 @@ def parse_args():
     return args
 
 
+def manipulate_header(header, dim):
+    """
+    Change the original header of the input file
+    Remove everything from the projected out dimension
+    """
+    fieldslinenum, fields = header.search_lines("FIELDS")[0]
+    proj_variable = fields.split()[dim+1]
+    proj_value = fields.split()[4]
+    header.replace_line("#! FIELDS {} projection.{}".format(proj_variable, proj_value),
+                        fieldslinenum)
+    removed_value = fields.split()[4-dim]
+    removed_lines = [i for i, x in header.search_lines(removed_value)]
+    for i in removed_lines:
+        header.del_line(i)
 
-
-
-
-# def extract_header(x):
-    # """Returns header of a plumed file as list"""
-    # header = []
-    # for line in open(x):
-        # if line.startswith('#'):
-            # header.append(line)
-        # else:
-            # return header
 
 def get_number_string(filename):
     """Get number string of file from the first number line"""
@@ -65,6 +69,10 @@ if __name__ == '__main__':
 
     fes = np.genfromtxt(args.filename)
     fmt = nfmt.NumberFmt(get_number_string(args.filename))
+    header = plmdheader.PlumedHeader()
+    header.parse_file(args.filename)
+    manipulate_header(header, args.dim)
+
 
     num_dim1 = np.where(fes[:, 0] == fes[0, 0])[0][1] # via periodicity
     num_dim2 = int(fes.shape[0] / num_dim1)
@@ -87,7 +95,8 @@ if __name__ == '__main__':
     projected_fes -= np.min(projected_fes)
 
     np.savetxt(args.outfile, np.asmatrix(np.vstack((cv_values, projected_fes)).T),
-               fmt=fmt.get(), delimiter=' ', newline='\n')
+               header=header.string(), fmt=fmt.get(), comments='', delimiter=' ',
+               newline='\n')
 
 # else:
     # exit(-1)
