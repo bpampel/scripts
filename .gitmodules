@@ -1,0 +1,3 @@
+[submodule "python/helpers"]
+	path = python/helpers
+	url = git@github.com:bpampel/python-helpers.git
