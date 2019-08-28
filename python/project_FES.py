@@ -46,12 +46,10 @@ def manipulate_header(header, dim):
     fieldslinenum, fields = header.search_lines("FIELDS")[0]
     proj_variable = fields.split()[dim+1]
     proj_value = fields.split()[4]
-    header.replace_line("#! FIELDS {} projection.{}".format(proj_variable, proj_value),
+    header.replace_line("#! FIELDS {} projection.{}\n".format(proj_variable, proj_value),
                         fieldslinenum)
     removed_value = fields.split()[4-dim]
-    removed_lines = [i for i, x in header.search_lines(removed_value)]
-    for i in removed_lines:
-        header.del_line(i)
+    header.del_lines([i for i, x in header.search_lines(removed_value)])
 
 
 def get_number_string(filename):
