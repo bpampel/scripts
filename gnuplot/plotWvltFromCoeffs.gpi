@@ -1,0 +1,48 @@
+#!/usr/bin/gnuplot
+
+# Terminal settings
+load "/home/theorie/pampel/scripts/gnuplot/style/pdf.gpi"
+set output "~/Wvlt_from_coeffs.pdf"
+
+
+set key bottom horizontal font ',10'
+
+waveletfile='~/scripts/python/calc_db_wavelets/Phi_8.dat'
+
+# get final coefficients from file via awk
+coeffnum=19
+coeffsfile='~/testcoeffs.dat'
+array coeff[coeffnum]
+do for [n=1:coeffnum] { coeff[n] = system("awk '$1==".n." {print $2}' ".coeffsfile." | tail -n 1") }
+
+p\
+  for [i=1:coeffnum]\
+    waveletfile u ($1+i):(coeff[i]*$2) w l title sprintf('%d',i)
+
+  #'bias.b1.iter-20000.data' u 1:2 w l lc 'black' lw 3 title "final bias",\
+  #'../../../pot.ref.data' u 1:(-$2-1.8) w l lc 'green' lw 3 title "potential",\
+  #\
+  #'../../bf-db08.data' u 1:( \
+    #coeff[1]*column(3)+ \
+    #coeff[2]*column(4)+ \
+    #coeff[3]*column(5)+ \
+    #0*coeff[4]*column(6)+ \
+    #coeff[5]*column(7)+ \
+    #coeff[6]*column(8)+ \
+    #coeff[7]*column(9)+ \
+    #coeff[8]*column(10)+ \
+    #coeff[9]*column(11)+ \
+    #coeff[10]*column(12)+ \
+    #coeff[11]*column(13)+ \
+    #coeff[12]*column(14)+ \
+    #coeff[13]*column(15)+ \
+    #coeff[14]*column(16)+ \
+    #coeff[15]*column(17)+ \
+    #coeff[16]*column(18)+ \
+    #coeff[17]*column(19)+ \
+    #coeff[18]*column(20)+ \
+    #coeff[19]*column(21)+ \
+    #coeff[20]*column(22)+ \
+    #coeff[21]*column(23) \
+    #) w l lc "red" lw 3 notitle,\
+

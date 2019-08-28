@@ -1,0 +1,49 @@
+#!/usr/bin/gnuplot -c
+
+# Style settings
+load "~/scripts/gnuplot/style/colors.gpi"
+#load "~/scripts/gnuplot/style/pdf.gpi"
+set output "~/Coeffs.pdf"
+
+set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font "Verdana,22"
+set border lw 1.5
+
+# check if dir was given as argument
+directory=ARG1
+if (directory eq "") {
+  print "Error: Please specify directory as first argument"
+  exit
+}
+cd directory
+
+
+# Set labels
+set xlabel "Time (ns)"
+set ylabel "Coefficients (kT)"
+set notitle
+
+# Set plot range and tic options
+set xr [0:3]
+set key top right horizontal font "Verdana,18"
+set ytics 2
+set xtics 1
+
+coeffs_stride=10
+ns_per_iteration=0.001
+kT=2.494339
+
+filename='coeffs.data'
+coefflabel(n) = sprintf("α_{%d}", n)
+coeffdata(n,m)=sprintf("< awk '$1==%d {print $%d}' %s", n, m, filename)
+
+# variables for multiplot
+coeffs_per_plot = 6
+coeffnum = 24
+
+#do for [p=0:(coeffnum/coeffs_per_plot)]{
+pl for [i=10:14]\
+  coeffdata(i,2) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l lw 6 title coefflabel(i-9),\
+   for [i=10:14]\
+    coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l lt (i-9) lw 3 notitle
+  #pause -1
+#}

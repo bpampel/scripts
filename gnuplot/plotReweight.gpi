@@ -1,0 +1,29 @@
+#!/usr/bin/gnuplot -c
+
+# check if correct arguments were given
+directory=ARG1
+if (directory eq "") {
+  print "Error: Please specify directory as first argument"; exit }
+cd directory
+
+
+# Terminal settings
+load "~/scripts/gnuplot/style/pdf.gpi"
+set output "~/FES_reweight.pdf"
+
+# Set labels
+set xlabel "Distance (nm)"
+set ylabel "Free Energy (kT)"
+set title "Reweighted Histogram"
+
+# Set plot range and tic options
+set yr [-2:8]
+set xr [0.2:0.8]
+set xtics 0.1
+
+set key top right vertical sample 1.
+
+pl "~/delete/5/reweighting/histo" u 1:(-log($2)) w l ls 1 title "Scaling",\
+   "/usr/data/pampel/wavelets/8th_maxbfs/2/reweighting/histo" u 1:(-log($2)) w l ls 2 title "Wavelet",\
+   "/usr/data/pampel/unbiased/1/reweighting/histo" u 1:(-log($2)) w l ls 3 title "unbiased"
+
