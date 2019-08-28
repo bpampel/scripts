@@ -50,6 +50,7 @@ def manipulate_header(header, dim):
                         fieldslinenum)
     removed_value = fields.split()[4-dim]
     header.del_lines([i for i, x in header.search_lines(removed_value)])
+    header.data[-1] = header.data[-1][:-1]
 
 
 def get_number_string(filename):
