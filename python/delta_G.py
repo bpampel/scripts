@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """
-Project a multidimensional free energy surface onto fewer dimensions.
-Currently only 2d -> 1d
+Calculate free energy difference of two states by integrating over the
+probabilities
 """
 
 import argparse
 import numpy as np
+from helpers.misc import get_filenames
 
 
 def parse_args():
     """Get cli args"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename',
-                        help="Path to the FES file to be projected")
-    parser.add_argument("-kT", "--kT", type=float,
+    parser.add_argument('path',
+                        help="Path to the FES file or folder to be evaluated")
+    parser.add_argument('-kT', '--kT', type=float,
                         help="Energy (in units of kT) of the FES file",
                         required=True)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-f', '--file', action='store_false',
+                       help="Parse single fes file (default)")
+    group.add_argument('-d', '--dir', action='store_true',
+                       help="Parse one or multiple directories. \
+                             Looks for all numbered [0-9]* subfolders \
+                             or works on the directory itself.")
     # parser.add_argument("-A", "--stateA", '-nargs', nargs='+', type=float,
                         # help="Approximate location of basin A (takes 2 values)")
     # parser.add_argument("-B", "--stateB", '-nargs', nargs='+', type=float,
