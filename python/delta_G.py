@@ -6,7 +6,7 @@ probabilities
 
 import argparse
 import numpy as np
-from helpers.misc import get_filenames
+from helpers import misc as hlpmisc
 
 
 def parse_args():
@@ -54,32 +54,60 @@ def convert_to_matrix(fes):
     return fes[:, 2].reshape(num_dim2, num_dim1)
 
 
-if __name__ == '__main__':
-    # define some constants and values
-    args = parse_args()
+def calculate_delta_G(filename, kT, masks):
+    """
+    Calculates the free energy difference between two states
 
-    fes = np.genfromtxt(args.filename)
+    Arguments
+    ---------
+    filename : path to the fes file
+    kT       : energy in units of kT
+    masks    : a list with boolean numpy arrays resembling the two states
+
+    Returns
+    -------
+    delta_G  : a double containing the free energy difference
+    """
+
+    fes = np.genfromtxt(filename)
     fesmatrix = convert_to_matrix(fes)
 
-    cv1 = fes[:fesmatrix.shape[0], 0]
-    cv2 = fes[::fesmatrix.shape[0], 1]
-
-    probabilities = np.exp(- fesmatrix / float(args.kT))
+    probabilities = np.exp(- fesmatrix / float(kT))
 
     # masks for upper and lower regions of CV space
-    masks = []
     probs = []
-    masks.append(np.vstack((np.full((150, 301), True), np.full((151, 301), False))))
-    masks.append(np.vstack((np.full((151, 301), False), np.full((150, 301), True))))
 
     masks = masks & (probabilities > args.threshold) # exclude low probability areas
 
     for i in range(2):
         probs.append(np.sum(probabilities[masks[i]]))
 
-    delta_G = - args.kT * np.log(probs[0]/probs[1])
+    delta_G = - kT * np.log(probs[0]/probs[1])
 
-    print(delta_G)
+    return(delta_G)
+
+
+if __name__ == '__main__':
+    # read in cli arguments
+    args = parse_args()
+
+    # could also read in masks from elsewhere, this is for the Wulfe-Quapp potential
+    masks = []
+    masks.append(np.vstack((np.full((150, 301), True), np.full((151, 301), False))))
+    masks.append(np.vstack((np.full((151, 301), False), np.full((150, 301), True))))
+
+    if args.file:
+        print calculate_delta_G(args.path, args.kT, masks)
+    elif args.dir:
+        folders = hlpmisc.get_subfolders(args.path)
+        if not folders: # no subdirectories found - use current one
+            folders = [args.path]
+        files, times = hlpmisc.get_fesfiles(folders[0])
+        for folder in folders:
+            for filename, i in enumerate(files):
+                print calculate_delta_G(filename, args.kT, masks)
+
+
 
 
 
