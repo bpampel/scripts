@@ -12,18 +12,17 @@ def parse_args():
     """Get cli args"""
     parser = argparse.ArgumentParser()
     parser.add_argument('filename',
-                        help="Path to the FES file to be projected",
-                        required=True)
+                        help="Path to the FES file to be projected")
     parser.add_argument("-kT", "--kT", type=float,
                         help="Energy (in units of kT) of the FES file",
                         required=True)
-    parser.add_argument("-A", "--stateA", 'nargs', nargs='+', type=float,
-                        help="Approximate location of basin A (takes 2 values)")
+    # parser.add_argument("-A", "--stateA", '-nargs', nargs='+', type=float,
+                        # help="Approximate location of basin A (takes 2 values)")
+    # parser.add_argument("-B", "--stateB", '-nargs', nargs='+', type=float,
+                        # help="Approximate location of basin B (takes 2 values)")
     parser.add_argument("-t", "--threshold", type=float,
                         help="Probability threshold of basins",
                         default="0.0")
-    parser.add_argument("-B", "--stateB", 'nargs', nargs='+', type=float,
-                        help="Approximate location of basin B (takes 2 values)")
     parser.add_argument("-o", "--outfile",
                         help="Name of the output file")
 
@@ -62,7 +61,7 @@ if __name__ == '__main__':
     # masks for upper and lower regions of CV space
     masks = []
     probs = []
-    masks.append(np.vstack((np.full((151, 301), True), np.full((151, 301), False))))
+    masks.append(np.vstack((np.full((150, 301), True), np.full((151, 301), False))))
     masks.append(np.vstack((np.full((151, 301), False), np.full((150, 301), True))))
 
     masks = masks & (probabilities > args.threshold) # exclude low probability areas
