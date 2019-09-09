@@ -38,7 +38,7 @@ def parse_args():
 
     if args.outfile is None:
         directory = ''
-        splitted_filename = args.filename.split('/')
+        splitted_filename = args.path.split('/')
         if len(splitted_filename) > 1:
             directory = '/'.join(splitted_filename[:-1]) + "/"
         args.outfile = directory + "delta_G" + "_" +  splitted_filename[-1]
