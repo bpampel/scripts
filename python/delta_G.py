@@ -97,7 +97,7 @@ if __name__ == '__main__':
     masks.append(np.vstack((np.full((151, 301), False), np.full((150, 301), True))))
 
     if args.file:
-        print calculate_delta_G(args.path, args.kT, masks)
+        print(calculate_delta_G(args.path, args.kT, masks))
     elif args.dir:
         folders = hlpmisc.get_subfolders(args.path)
         if not folders: # no subdirectories found - use current one
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         files, times = hlpmisc.get_fesfiles(folders[0])
         for folder in folders:
             for filename, i in enumerate(files):
-                print calculate_delta_G(filename, args.kT, masks)
+                print(calculate_delta_G(filename, args.kT, masks))
 
 
 
