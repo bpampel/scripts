@@ -49,7 +49,7 @@ def extract_header(x):
 if __name__ == '__main__':
     # define some constants and values
     kT = 1 # 300K
-    shift_threshold = 4 * kT
+    shift_threshold = 1 * kT
     error_threshold = 2 * shift_threshold
     custom_cv_range = [0.0, 0.7]
     avgerror = []
@@ -59,8 +59,8 @@ if __name__ == '__main__':
     avgstddevrms = []
     avgbiasrms = []
     avgnewbiasrms = []
-    avgfolder = 'avg_new'
-    errorfile = 'error_new.txt'
+    avgfolder = 'avg'
+    errorfile = 'error.txt'
 
     if len(sys.argv) == 2:
         os.chdir(sys.argv[1])
