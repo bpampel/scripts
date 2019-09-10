@@ -41,12 +41,12 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if args.average and not args.dir:
-        raise ValueError("-avg without -d doesn't make sense.")
-
-    if args.fd == 'f' and args.outfile:
-        print("Single file given. Ignoring outfile argument.")
-
+    # exclude some options that don't make sense together
+    if args.fd == 'f':
+        if args.average:
+            raise ValueError("-avg without -d doesn't make sense.")
+        if args.outfile:
+            print("Single file given. Ignoring outfile argument.")
 
     return args
 
