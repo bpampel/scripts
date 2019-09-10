@@ -5,7 +5,9 @@ probabilities
 """
 
 import argparse
+from functools import partial
 import os
+from multiprocessing import Pool
 import numpy as np
 from helpers import misc as hlpmisc
 
@@ -35,6 +37,8 @@ def parse_args():
     parser.add_argument("-t", "--threshold", type=float,
                         help="Probability threshold of basins",
                         default="0.0")
+    parser.add_argument("-np", "--numprocs", type=int, default="1",
+                        help="Number of parallel processes")
     parser.add_argument("-o", "--outfile",
                         help='Name of the output file(s). Default is "delta_G"')
     parser.set_defaults(fd='f')
@@ -150,20 +154,19 @@ def main():
 
         files, times = hlpmisc.get_fesfiles(folders[0])
 
-        delta_G = np.ndarray(shape=(len(folders),len(files))) # store all for stddev
+        pool = Pool(processes=args.numprocs)
 
-        errorheader = '#! FIELDS time delta_G stddev'
+        allfilenames = [folder + file for folder in folders for file in files]
+        delta_G = pool.map(partial(calculate_delta_G, kT=args.kT, masks=masks), allfilenames)
+        delta_G = np.array(delta_G).reshape(len(folders),len(files))
 
         for i, folder in enumerate(folders):
-            for j, filename in enumerate(files):
-                delta_G[i,j] = calculate_delta_G(folder + filename, args.kT, masks)
             np.savetxt(outfilenames[i], delta_G[i])
 
         if args.average:
             avg_delta_G = np.average(delta_G, axis=0)
             stddev = np.std(delta_G, axis=0, ddof=1)
             np.savetxt(avgfilename, np.vstack((times, avg_delta_G, stddev)).T)
-
 
 if __name__ == '__main__':
     main()
