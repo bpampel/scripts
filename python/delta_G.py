@@ -51,7 +51,7 @@ def parse_args():
     return args
 
 
-def get_outfilenames(outfile, folders, inputpath):
+def get_outfilenames(outfile, folders):
     """decide on outfile names depending on cli arguments given"""
     outfilenames = []
     avgname = None
@@ -65,20 +65,20 @@ def get_outfilenames(outfile, folders, inputpath):
             dirname = os.path.dirname(outfile)
             if not dirname: # if only filename without path
                 outfilenames = [folder + outfile for folder in folders]
-                avgname = os.path.join(*dirname.split(os.path.sep)[:-1], outfile) # same name in base directory
+                avgname = os.path.join(os.path.dirname(os.path.dirname(folders[0])), outfile) # same name in base directory
             else: # put all files in given folder with numbers to differentiate
                 dirname = os.path.dirname(outfile)
                 basename = os.path.basename(outfile)
                 numbers = [folder.split(os.path.sep)[-2] for folder in folders]
                 outfilenames = [os.path.join(dirname, basename + "." + i) for i in numbers]
-                avgname = dirname + os.path.sep + basename + ".avg"
+                avgname = os.path.join(dirname, basename + ".avg")
     else: # no filename given
         basename = "delta_G"
         outfilenames = [folder + basename for folder in folders]
-        avgname = os.path.join(*dirname.split(os.path.sep)[:-1], "delta_G") # same name in base directory
+        avgname = os.path.join(os.path.dirname(os.path.dirname(folders[0])), "delta_G") # same name up one directory
 
 
-    return outfilenames
+    return (outfilenames, avgname)
 
 
 def convert_to_matrix(fes):
@@ -146,7 +146,7 @@ def main():
                 raise ValueError("No subdirectories found. Averaging not possible.")
 
         # has to be done here as it's previously not clear if multiple folders are involved
-        outfilenames, avgfilename = get_outfilenames(args.outfile, folders, args.path)
+        outfilenames, avgfilename = get_outfilenames(args.outfile, folders)
 
         files, times = hlpmisc.get_fesfiles(folders[0])
 
@@ -162,7 +162,7 @@ def main():
         if args.average:
             avg_delta_G = np.average(delta_G, axis=0)
             stddev = np.std(delta_G, axis=0, ddof=1)
-            np.savetxt(avgfilename, np.vstack(times, avg_delta_G, stddev))
+            np.savetxt(avgfilename, np.vstack((times, avg_delta_G, stddev)).T)
 
 
 if __name__ == '__main__':
