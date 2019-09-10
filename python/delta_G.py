@@ -5,8 +5,8 @@ probabilities
 """
 
 import argparse
-import numpy as np
 import os
+import numpy as np
 from helpers import misc as hlpmisc
 
 
@@ -25,7 +25,7 @@ def parse_args():
                        help="Parse one or multiple directories. \
                              Looks for all numbered [0-9]* subfolders \
                              or works on the directory itself.")
-    parser.add_argument("-avg", "--average",
+    parser.add_argument("-avg", "--average", action='store_true',
                         help="Also calculate average over runs. \
                               Requires the --dir flag.")
     # parser.add_argument("-A", "--stateA", '-nargs', nargs='+', type=float,
@@ -45,7 +45,7 @@ def parse_args():
         raise ValueError("-avg without -d doesn't make sense.")
 
     if args.fd == 'f' and args.outfile:
-        print("Single file given. Ignoring outfile argument")
+        print("Single file given. Ignoring outfile argument.")
 
 
     return args
