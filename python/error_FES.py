@@ -6,10 +6,35 @@ Compares the average values pointwise to a reference FES for the bias.
 Combination of both gives the total error.
 """
 
+import argparse
 import glob
 import os
-import sys
 import numpy as np
+
+
+def parse_args():
+    """Get cli args"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path',
+                        help="Path to the folder to be evaluated")
+    parser.add_argument('-r', '--ref',
+                        help="Path to the reference FES file",
+                        required=True)
+    parser.add_argument('-kT', '--kT', type=float,
+                        help="Value of kT for the FES file (in matching units)",
+                        required=True)
+    parser.add_argument("-st", "--shifting_threshold", type=float,
+                        help="Threshold value of FES (in units of kT) for shifting area",
+                        default="4.0")
+    parser.add_argument("-et", "--error_threshold", type=float,
+                        help="Threshold value of FES (in units of kT) for error area",
+                        default="8.0")
+    # parser.add_argument("-min", "--minimum", type=float,
+                        # help="Minimum of the CV range to be taken into account")
+    # parser.add_argument("-max", "--maximum", type=float,
+                        # help="Maximum of the CV range to be taken into account")
+    args = parser.parse_args()
+    return args
 
 
 def get_filenames():
@@ -47,11 +72,13 @@ def extract_header(x):
 
 
 if __name__ == '__main__':
+    args = parse_args()
     # define some constants and values
-    kT = 1 # 300K
-    shift_threshold = 1 * kT
-    error_threshold = 2 * shift_threshold
-    custom_cv_range = [0.0, 0.7]
+    kT = 0.5  # 300K
+    shift_threshold = args.kT * args.shifting_threshold
+    shift_threshold = args.kT * args.shifting_threshold
+    error_threshold = args.kT * args.error_threshold
+    # custom_cv_range = [0.0, 0.7]
     avgerror = []
     avgstddev = []
     avgbias = []
@@ -62,19 +89,17 @@ if __name__ == '__main__':
     avgfolder = 'avg'
     errorfile = 'error.txt'
 
-    if len(sys.argv) == 2:
-        os.chdir(sys.argv[1])
-    else:
-        os.chdir(input("Base directory of the datasets: "))
-
     # read reference
-    referencefile = '../pot.ref.data'
-    while True:
-        try:
-            colvar, ref = np.transpose(np.genfromtxt(referencefile))
-            break
-        except IOError:
-            referencefile = input("Path to the reference FES: ")
+    try:
+        colvar, ref = np.transpose(np.genfromtxt(args.ref))
+    except IOError:
+        print("Reference file not found!")
+
+    try:
+        os.chdir(args.path)
+    except IOError:
+        print("Could not change to specified directory")
+
 
     # determine regions of interest and create arrays of booleans
     # colvar_region = np.array([colvar >= custom_cv_range[0]]) & np.array([colvar <= custom_cv_range[1]])
@@ -108,43 +133,27 @@ if __name__ == '__main__':
         bias = np.absolute(avgdata - ref)
         avgbias.append(np.average(np.extract(error_region, bias)))
 
-
-        # new part from here: bias similar to branduardi (stddev w/r to reference)
-        shifteddata = []
-        for dataset in data:
-            datashift = np.average(np.extract(shift_region, dataset))
-            shifteddata.append(dataset + refshift - datashift)
-
-        newbias = np.sqrt(np.average((shifteddata - ref)**2, axis=0))
-        avgnewbias.append(np.average(np.extract(error_region, newbias)))
-
-        # other experiment: root mean square the CV space instead of just averaging
-        avgstddevrms.append(np.sqrt(errornorm * np.average(np.extract(error_region, stddev)**2)))
-        avgbiasrms.append(np.sqrt(errornorm * np.average(np.extract(error_region, bias)**2)))
-        avgnewbiasrms.append(np.sqrt(errornorm * np.average(np.extract(error_region, newbias)**2)))
-
-
-
-
         # add to recieve total error
         error = np.sqrt(stddev**2 + bias**2)
         avgerror.append(np.average(np.extract(error_region, error)))
 
         # copy header from one infile and add fields
         fileheader = extract_header(folders[0]+filename)
-        fileheader[0] = fileheader[0][:-1] + ' stddev bias newbias error\n'
+        fileheader[0] = fileheader[0][:-1] + ' stddev bias error\n'
         # fileheader.append('#! shift ' + str(refshift + datashift) + '\n')
         fileheader = ''.join(fileheader)[:-1]
 
         # write data of current time to file
-        outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, newbias, error)))
+        outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, error)))
         np.savetxt(avgfolder+ os.path.sep + filename, np.asmatrix(outdata), header=fileheader,
                    comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
     # write averaged error to file
     backup_if_exists(errorfile)
-    errorheader = '#! FIELDS time total_error stddev bias newbias stddevrms biasrms newbiasrms'
-    errordata = np.transpose(np.vstack((times, avgerror, avgstddev, avgbias, avgnewbias, avgstddevrms, avgbiasrms, avgnewbiasrms)))
+    errorheader =     "#! FIELDS time total_error stddev bias"
+    errorheader += ("\n#! SET kT " + str(args.kT))
+    errorheader += ("\n#! SET error_threshold " + str(args.error_threshold))
+    errordata = np.transpose(np.vstack((times, avgerror, avgstddev, avgbias)))
     np.savetxt(errorfile, np.asmatrix(errordata), header=errorheader,
                comments='', fmt='%1.16f', delimiter=' ', newline='\n')
 
