@@ -161,7 +161,7 @@ def main():
         delta_G = np.array(delta_G).reshape(len(folders),len(files))
 
         for i, folder in enumerate(folders):
-            np.savetxt(outfilenames[i], delta_G[i])
+            np.savetxt(outfilenames[i], np.vstack((times, delta_G[i])).T)
 
         if args.average:
             avg_delta_G = np.average(delta_G, axis=0)
