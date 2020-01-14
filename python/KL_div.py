@@ -22,10 +22,12 @@ def parse_args():
     parser.add_argument('-k', '--kT', type=float,
                         help="Value of kT for the FES files (in matching units)",
                         required=True)
-    parser.add_argument('-i', '--invert', action='store_true',
-                        help="Use the reference probabilities as Q(x) instead of P(x)")
+    parser.add_argument('-o', '--outfile', default="kl_div",
+                        help="Name of the output file(s), defaults to \"kl_div\"")
     parser.add_argument("-a", "--average", action='store_true',
                         help="Also calculate average over runs.")
+    parser.add_argument('-i', '--invert', action='store_true',
+                        help="Use the reference probabilities as Q(x) instead of P(x)")
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
     args = parser.parse_args()
@@ -48,7 +50,14 @@ def extract_header(x):
             return header
 
 
+def fes_to_prob(fes, kT):
+    """Returns normalized probability distribution from free energy surface"""
+    prob = np.exp(- fes / float(kT))
+    return normalize_distribution(prob)
+
+
 def normalize_distribution(x):
+    """Normalize a probability distribution"""
     norm = 1 / np.sum(x)
     return x * norm
 
@@ -71,7 +80,7 @@ def kl_div(p, q):
     return np.sum(x)
 
 
-def kl_div_to_ref(filename, ref, kT):
+def kl_div_to_ref(filename, ref, kT, inv):
     """
     Calculates the Kullback-Leibler divergence of a FES file to a reference
 
@@ -89,9 +98,12 @@ def kl_div_to_ref(filename, ref, kT):
     fes = np.genfromtxt(filename).T[1] # limits current usage to 1D FES
     if fes.shape != ref.shape:
         raise ValueError("Format of reference and file " + filename + " does not match")
-    prob = normalize_distribution(np.exp(- fes / float(kT)))
+    prob = fes_to_prob(fes, kT)
 
-    return kl_div(ref, prob)
+    if inv:
+        return kl_div(prob, ref)
+    else:
+        return kl_div(ref, prob)
 
 
 if __name__ == '__main__':
@@ -102,7 +114,7 @@ if __name__ == '__main__':
         colvar, ref = np.genfromtxt(args.ref).T
     except IOError:
         print("Reference file not found!")
-    ref = normalize_distribution(np.exp(- ref / float(args.kT)))
+    ref = fes_to_prob(ref, args.kT)
 
     # get subfolders and filenames
     folders = hlpmisc.get_subfolders(args.path)
@@ -120,14 +132,14 @@ if __name__ == '__main__':
 
     pool = Pool(processes=args.numprocs)
 
-    kl = pool.map(partial(kl_div_to_ref, kT=args.kT, ref=ref), allfilenames)
+    kl = pool.map(partial(kl_div_to_ref, kT=args.kT, ref=ref, inv=args.invert), allfilenames)
     kl = np.array(kl).reshape(len(folders),len(files)) # put in matrix form
 
     fileheader =     "#! FIELDS time kl_div"
     fileheader += ("\n#! SET kT " + str(args.kT))
 
     for i, folder in enumerate(folders):
-        outfile = os.path.join(folder, "kl_div")
+        outfile = os.path.join(folder, args.outfile)
         hlpmisc.backup_if_exists(outfile)
         np.savetxt(outfile, np.vstack((times, kl[i])).T, header=fileheader,
                    delimiter=' ', newline='\n')
@@ -136,7 +148,7 @@ if __name__ == '__main__':
     avgheader += ("\n#! SET kT " + str(args.kT))
 
     if args.average:
-        avgfile = os.path.join(os.path.dirname(os.path.dirname(folders[0])), "kl_div") # in base dir
+        avgfile = os.path.join(os.path.dirname(os.path.dirname(folders[0])), args.outfile) # in base dir
         hlpmisc.backup_if_exists(avgfile)
         avg_kl = np.average(kl, axis=0)
         stddev = np.std(kl, axis=0, ddof=1)
