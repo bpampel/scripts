@@ -74,7 +74,6 @@ def extract_header(x):
 if __name__ == '__main__':
     args = parse_args()
     # define some constants and values
-    kT = 0.5  # 300K
     shift_threshold = args.kT * args.shifting_threshold
     shift_threshold = args.kT * args.shifting_threshold
     error_threshold = args.kT * args.error_threshold
