@@ -22,6 +22,8 @@ def parse_args():
     parser.add_argument('-k', '--kT', type=float,
                         help="Value of kT for the FES files (in matching units)",
                         required=True)
+    parser.add_argument('-d', '--dim', type=int, default=1,
+                        help="Dimension of the FES files, defaults to 1")
     parser.add_argument('-o', '--outfile', default="kl_div",
                         help="Name of the output file(s), defaults to \"kl_div\"")
     parser.add_argument("-a", "--average", action='store_true',
@@ -32,22 +34,10 @@ def parse_args():
                         help="Number of parallel processes")
     args = parser.parse_args()
 
+    if args.dim > 2:
+        raise ValueError("Currently only 1d or 2d FES are supported")
+
     return args
-
-
-def extract_time(x):
-    """Returns time associated with file as int"""
-    return int(''.join(i for i in x if i.isdigit())[1:])
-
-
-def extract_header(x):
-    """Returns header of a plumed file as list"""
-    header = []
-    for line in open(x):
-        if line.startswith('#'):
-            header.append(line)
-        else:
-            return header
 
 
 def fes_to_prob(fes, kT):
@@ -68,8 +58,8 @@ def kl_div(p, q):
 
     Arguments
     ---------
-    p : data / reference probabilities
-    q : model probabilities
+    p : numpy array containing the data / reference probabilities
+    q : numpy array containing the model probabilities
 
     Returns
     -------
@@ -80,7 +70,7 @@ def kl_div(p, q):
     return np.sum(x)
 
 
-def kl_div_to_ref(filename, ref, kT, inv):
+def kl_div_to_ref(filename, ref, kT, dim, inv):
     """
     Calculates the Kullback-Leibler divergence of a FES file to a reference
 
@@ -95,9 +85,9 @@ def kl_div_to_ref(filename, ref, kT, inv):
     kl_div : a double containing the KL divergence
     """
 
-    fes = np.genfromtxt(filename).T[1] # limits current usage to 1D FES
+    fes = np.genfromtxt(filename).T[dim]
     if fes.shape != ref.shape:
-        raise ValueError("Format of reference and file " + filename + " does not match")
+        raise ValueError("Number of elements of reference and file " + filename + " does not match")
     prob = fes_to_prob(fes, kT)
 
     if inv:
@@ -111,10 +101,12 @@ if __name__ == '__main__':
 
     # read reference fes file
     try:
-        colvar, ref = np.genfromtxt(args.ref).T
+        ref = np.genfromtxt(args.ref).T
     except IOError:
         print("Reference file not found!")
-    ref = fes_to_prob(ref, args.kT)
+    if ref.shape[0] != args.dim + 1: # dim colvar columns + data colum
+        raise ValueError("Specified dimension and dimension of reference file do not match.")
+    ref = fes_to_prob(ref[args.dim], args.kT) # overwrite ref with the probabilities
 
     # get subfolders and filenames
     folders = hlpmisc.get_subfolders(args.path)
@@ -132,7 +124,7 @@ if __name__ == '__main__':
 
     pool = Pool(processes=args.numprocs)
 
-    kl = pool.map(partial(kl_div_to_ref, kT=args.kT, ref=ref, inv=args.invert), allfilenames)
+    kl = pool.map(partial(kl_div_to_ref, kT=args.kT, ref=ref, dim=args.dim, inv=args.invert), allfilenames)
     kl = np.array(kl).reshape(len(folders),len(files)) # put in matrix form
 
     fileheader =     "#! FIELDS time kl_div"
