@@ -33,10 +33,6 @@ def parse_args():
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
     args = parser.parse_args()
-
-    if args.dim > 2:
-        raise ValueError("Currently only 1d or 2d FES are supported")
-
     return args
 
 
