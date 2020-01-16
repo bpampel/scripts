@@ -5,7 +5,7 @@ Calculate the scaling function and its derivative for Daubechies Wavelets
 
 import sys
 import numpy as np
-import calc_db_wavelets as wvlt
+import wavelet_generator as wvlt
 
 def significant_range(array, threshold):
     """Returns list with indices of first and last element above threshold"""

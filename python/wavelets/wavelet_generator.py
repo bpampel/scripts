@@ -3,12 +3,35 @@
 Calculate the scaling function and its derivative for Daubechies Wavelets
 '''
 
+import argparse
 import sys
 from numpy.polynomial import polynomial as poly
 import numpy as np
 from scipy.special import comb
 
-def db_filter_coeffs(p, norm=1, linphase=False):
+
+def parse_args():
+    """Get cli args"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--order',
+                        required=True, type=int,
+                        help="Order (number of vanishing moments) of the wavelet")
+    parser.add_argument('-t', '--type', required=True,
+                        help="The wavelet type, possible options are Db and Sym")
+    parser.add_argument('-f', '--filename', nargs='+',
+                        help="Name of the output file(s),\n\
+                              defaults to phi_$type$order and psi_$type$order if wavelets are calculated.")
+    parser.add_argument('-c', '--coeffs', action='store_true',
+                        help="Print the filter coefficients.\n\
+                              Output is by default to screen but can be to file if the -f flag is given")
+    parser.add_argument('-norm', '--coeffsnorm', default=1/np.sqrt(2),
+                        help="Normalization of the filter coefficients to be printed.\n\
+                              Will be ignored if the -c flag is not specified.")
+    args = parser.parse_args()
+    return args
+
+
+def filter_coeffs(p, norm=1, linphase=False):
     ''' Calculate the filter coefficients for Daubechies Wavelets
 
     c.f. Strang, Nguyen - "Wavelets and Filters" ch. 5.5
@@ -29,9 +52,9 @@ def db_filter_coeffs(p, norm=1, linphase=False):
     roots = [poly.polyroots([1, 4*yi - 2, 1]) for yi in y]
     if not linphase:
         # take the ones inside the unit circle
-        z = [root for root in roots if np.abs(root) < 1]
+        z = [root for pair in roots for root in pair if np.abs(root) < 1]
     else:
-        # sort roots according to Kateb & Lemarie-Rieusset (1995)
+        # sort roots according to Kahane & Lemarie-Rieusset (1995)
         imaglargerzero = list(filter(lambda root: np.imag(root[0]) >= 0, roots))
         imagsmallerzero = list(filter(lambda root: np.imag(root[0]) < 0, roots))
         imaglargerzero.sort(key=lambda x: np.absolute(x[0]))
@@ -42,7 +65,6 @@ def db_filter_coeffs(p, norm=1, linphase=False):
         for i, root in enumerate(sortedroots):
             takelarger = ( (i+1)%4 <= 1 )
             z.append(root[takelarger*1])
-
     z += [-1]*p
     # put together the polynomial C(z) and normalize the coefficients
     C_z = np.real(poly.polyfromroots(z)) # imaginary part may be non-zero because of rounding errors
@@ -91,7 +113,7 @@ def normalize_eigenvector(eigvec, derivnum):
     return eigvec * norm
 
 
-def db_wavelet(p, d=6):
+def wavelet(p, d=6, linphase=False):
     '''Calculate the scaling and wavelet function for Daubechies Wavelets
 
     :param p: order p of (equivalent to the number of vanishing moments)
@@ -99,7 +121,7 @@ def db_wavelet(p, d=6):
     :return: (x, phi, psi) where phi is the scaling and psi the wavelet function
     '''
     n = 2*p - 1
-    h = db_filter_coeffs(p, 1/np.sqrt(2))
+    h = filter_coeffs(p, 1/np.sqrt(2), linphase)
     g = highpass_from_lowpass(h)
     # print("h: {}\n".format(h))
     H = m_matrices(h)
@@ -161,12 +183,35 @@ def db_wavelet(p, d=6):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        order = int(input("Please specify the order of the Daubechies Wavelets to "
-                          "be calculated (1-34):\n"))
-    else:
-        order = int(sys.argv[1])
+    args = parse_args()
 
-    x, scaling_func, wavelet = db_wavelet(order, 6)
-    np.savetxt("Phi_{}.dat".format(order), np.transpose(np.vstack((x,scaling_func))))
-    np.savetxt("Psi_{}.dat".format(order), np.transpose(np.vstack((x,wavelet))))
+    if args.type == "Db":
+        linphase = False
+    elif args.type == "Sym":
+        linphase = True
+    else:
+        raise ValueError("The specified type is neither \"Db\" nor \"Sym\"")
+
+    if args.coeffs:
+        coeffs = filter_coeffs(args.order, args.coeffsnorm, linphase)
+        if args.filename is None:
+            [print(c) for c in coeffs][0] # crude but simple way to print linewise
+        elif len(args.filename) == 1:
+            header =     "#! FIELDS coeff"
+            header += ("\n#! SET type " + args.type + str(args.order))
+            np.savetxt(args.filename, coeffs.T)
+        else:
+            raise ValueError("More than one filename was specified for printing the coefficients.\n\
+                              This is ambiguous.")
+
+    else: # do the main program, i.e. calculate and print the wavelet functions
+        if args.filename is None: # default names
+            filenames = [p + "_" + args.type + str(args.order) for p in ["Phi", "Psi"]]
+        elif len(args.filenames) == 2:
+            filenames = args.filenames
+        else:
+            raise ValueError("Please specify two filenames for both Phi and Psi")
+
+        x, scaling_func, wavelet = wavelet(args.order, 6, linphase)
+        for i, f in enumerate([scaling_func, wavelet]):
+            np.savetxt(filenames[i], np.vstack((x,f)).T)
