@@ -10,7 +10,6 @@ import os
 from multiprocessing import Pool
 import numpy as np
 from helpers import misc as hlpmisc
-import sys
 
 
 def parse_args():
@@ -31,17 +30,6 @@ def parse_args():
     parser.add_argument("-avg", "--average", action='store_true',
                         help="Also calculate average over runs. \
                               Requires the --dir flag.")
-    # parser.add_argument("-A", "--stateA", '-nargs', nargs='+', type=float,
-                        # help="Approximate location of basin A (takes 2 values)")
-    # parser.add_argument("-B", "--stateB", '-nargs', nargs='+', type=float,
-                        # help="Approximate location of basin B (takes 2 values)")
-    # parser.add_argument("-t", "--threshold", type=float,
-                        # help="Probability threshold of basins",
-                        # default="0.0")
-    parser.add_argument("-m1", "--mask1",
-                        help="File containing mask of first basin")
-    parser.add_argument("-m2", "--mask2",
-                        help="File containing mask of second basin")
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
     parser.add_argument("-o", "--outfile",
@@ -56,9 +44,6 @@ def parse_args():
             raise ValueError("-avg without -d doesn't make sense.")
         if args.outfile:
             print("Single file given. Ignoring outfile argument.")
-    if args.mask1 and not args.mask2:
-        raise ValueError("Only one mask file specified. Please specify the second one as well.")
-
     return args
 
 
@@ -92,13 +77,6 @@ def get_outfilenames(outfile, folders):
     return (outfilenames, avgname)
 
 
-def convert_to_matrix(fes):
-    num_dim1 = np.where(fes[:, 0] == fes[0, 0])[0][1] # via periodicity
-    num_dim2 = int(fes.shape[0] / num_dim1)
-
-    # dim2 is in the rows because fes from plumed is column major
-    return fes[:, 2].reshape(num_dim2, num_dim1)
-
 
 def calculate_delta_G(filename, kT, masks):
     """
@@ -115,10 +93,9 @@ def calculate_delta_G(filename, kT, masks):
     delta_G  : a double containing the free energy difference
     """
 
-    fes = np.genfromtxt(filename)
-    fesmatrix = convert_to_matrix(fes)
+    fes = np.genfromtxt(filename).T[1]
 
-    probabilities = np.exp(- fesmatrix / float(kT))
+    probabilities = np.exp(- fes / float(kT))
 
     # masks for upper and lower regions of CV space
     probs = []
@@ -138,20 +115,10 @@ def main():
     args = parse_args()
 
 
-    # could also read in masks from elsewhere, this is for the Wulfe-Quapp potential
+    # could also read in masks from elsewhere, this is for the Wolfe-Quapp potential
     masks = []
-    if args.mask1 and args.mask2:
-        for m in (args.mask1, args.mask2):
-            try:
-                mask = np.genfromtxt(m, dtype=int) # could also save in binary but as int is more readable
-                mask = mask.astype('bool') # but it has to be converted again
-            except OSError:
-                sys.exit('Error: Specified masks file "{}" not found'.format(m))
-            masks.append(mask)
-    else:
-        print("Using default values for masks (WQ-pot)")
-        masks.append(np.vstack((np.full((150, 301), True), np.full((151, 301), False))))
-        masks.append(np.vstack((np.full((151, 301), False), np.full((150, 301), True))))
+    masks.append(np.concatenate((np.full(150, True), np.full(151, False))))
+    masks.append(np.concatenate((np.full(151, False), np.full(150, True))))
 
     if args.fd == 'f':
         print(calculate_delta_G(args.path, args.kT, masks))
