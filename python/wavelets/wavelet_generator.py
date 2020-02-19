@@ -18,13 +18,13 @@ def parse_args():
                         help="Order (number of vanishing moments) of the wavelet")
     parser.add_argument('-t', '--type', required=True,
                         help="The wavelet type, possible options are Db and Sym")
-    parser.add_argument('-f', '--filename', nargs='+',
+    parser.add_argument('-f', '--filename',
                         help="Name of the output file(s),\n\
-                              defaults to phi_$type$order and psi_$type$order if wavelets are calculated.")
+                              defaults to $type$order if wavelets are calculated.")
     parser.add_argument('-c', '--coeffs', action='store_true',
                         help="Print the filter coefficients.\n\
                               Output is by default to screen but can be to file if the -f flag is given")
-    parser.add_argument('-norm', '--coeffsnorm', default=1/np.sqrt(2),
+    parser.add_argument('-norm', '--coeffsnorm', type=float, default=np.sqrt(2),
                         help="Normalization of the filter coefficients to be printed.\n\
                               Will be ignored if the -c flag is not specified.")
     args = parser.parse_args()
@@ -54,7 +54,9 @@ def filter_coeffs(p, norm=1, linphase=False):
         # take the ones inside the unit circle
         z = [root for pair in roots for root in pair if np.abs(root) < 1]
     else:
-        # sort roots according to Kahane & Lemarie-Rieusset (1995)
+        # sort roots according to Kateb & Lemarie-Rieusset (1995)
+        # note: This does not always yield the 'most linear' set
+        #       but some 'more linear phase'. I might also have misread the paper
         imaglargerzero = list(filter(lambda root: np.imag(root[0]) >= 0, roots))
         imagsmallerzero = list(filter(lambda root: np.imag(root[0]) < 0, roots))
         imaglargerzero.sort(key=lambda x: np.absolute(x[0]))
@@ -123,7 +125,7 @@ def wavelet(p, d=6, linphase=False):
     n = 2*p - 1
     h = filter_coeffs(p, 1/np.sqrt(2), linphase)
     g = highpass_from_lowpass(h)
-    # print("h: {}\n".format(h))
+
     H = m_matrices(h)
     G = m_matrices(g)
 
@@ -161,8 +163,6 @@ def wavelet(p, d=6, linphase=False):
         phi[j][step >> 1::step] = binarydict['1']
         psi[j][::step] = G_temp[0] @ values_at_int[j]
         psi[j][step >> 1::step] = G_temp[1] @ values_at_int[j]
-        # if j == 0:
-            # print("Values at ints: \n{}\n".format(G_temp[0] @ values_at_int[j]))
 
         oldbits = ['1']
         for depth in range(2, d + 1):
@@ -195,23 +195,17 @@ if __name__ == '__main__':
     if args.coeffs:
         coeffs = filter_coeffs(args.order, args.coeffsnorm, linphase)
         if args.filename is None:
-            [print(c) for c in coeffs][0] # crude but simple way to print linewise
-        elif len(args.filename) == 1:
+            [print("{:.32e}".format(c)) for c in coeffs][0] # crude but simple way to print linewise
+        else:
             header =     "#! FIELDS coeff"
             header += ("\n#! SET type " + args.type + str(args.order))
-            np.savetxt(args.filename, coeffs.T)
-        else:
-            raise ValueError("More than one filename was specified for printing the coefficients.\n\
-                              This is ambiguous.")
+            np.savetxt(args.filename, coeffs.T, header=header)
 
     else: # do the main program, i.e. calculate and print the wavelet functions
-        if args.filename is None: # default names
-            filenames = [p + "_" + args.type + str(args.order) for p in ["Phi", "Psi"]]
-        elif len(args.filenames) == 2:
-            filenames = args.filenames
-        else:
-            raise ValueError("Please specify two filenames for both Phi and Psi")
-
         x, scaling_func, wavelet = wavelet(args.order, 6, linphase)
-        for i, f in enumerate([scaling_func, wavelet]):
-            np.savetxt(filenames[i], np.vstack((x,f)).T)
+        if args.filename is None: # default names
+            args.filename = args.type + str(args.order)
+        header =     "#! FIELDS x Phi Psi"
+        header += ("\n#! SET type " + args.type + str(args.order))
+        np.savetxt(args.filename, np.vstack((x, scaling_func[0], wavelet[0])).T,
+                   header=header)
