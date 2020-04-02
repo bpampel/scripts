@@ -5,10 +5,10 @@ Currently only 2d -> 1d
 """
 
 import argparse
-from os import path
 import numpy as np
 from helpers import plumed_header as plmdheader
 from helpers import number_format as nfmt
+from helpers import misc as hlpmisc
 
 
 def parse_args():
@@ -29,11 +29,7 @@ def parse_args():
     args = parser.parse_args()
 
     if args.outfile is None:
-        directory = ''
-        splitted_filename = args.filename.split('/')
-        if len(splitted_filename) > 1:
-            directory = '/'.join(splitted_filename[:-1]) + "/"
-        args.outfile = directory + "proj_" + str(args.dim) + "_" +  splitted_filename[-1]
+        args.outfile = hlpmisc.prefix_filename(args.filename, "proj_" + str(args.dim) + "_")
 
     return args
 
@@ -46,11 +42,9 @@ def manipulate_header(header, dim):
     fieldslinenum, fields = header.search_lines("FIELDS")[0]
     proj_variable = fields.split()[dim+1]
     proj_value = fields.split()[4]
-    header.replace_line("#! FIELDS {} projection.{}\n".format(proj_variable, proj_value),
-                        fieldslinenum)
+    header[fieldslinenum] = "#! FIELDS {} projection.{}".format(proj_variable, proj_value)
     removed_value = fields.split()[4-dim]
-    header.del_lines([i for i, x in header.search_lines(removed_value)])
-    header.data[-1] = header.data[-1][:-1]
+    header.del_lines([i for i, _ in header.search_lines(removed_value)])
 
 
 def get_number_string(filename):
@@ -94,8 +88,5 @@ if __name__ == '__main__':
     projected_fes -= np.min(projected_fes)
 
     np.savetxt(args.outfile, np.asmatrix(np.vstack((cv_values, projected_fes)).T),
-               header=header.string(), fmt=fmt.get(), comments='', delimiter=' ',
+               header=str(header), fmt=fmt.get(), comments='', delimiter=' ',
                newline='\n')
-
-# else:
-    # exit(-1)

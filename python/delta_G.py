@@ -9,8 +9,8 @@ from functools import partial
 import os
 from multiprocessing import Pool
 import numpy as np
-from helpers import misc as hlpmisc
 import sys
+from helpers import misc as hlpmisc
 
 
 def parse_args():
