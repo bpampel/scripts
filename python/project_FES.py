@@ -6,6 +6,7 @@ Currently only 2d -> 1d
 
 import argparse
 import numpy as np
+import re
 from helpers import plumed_header as plmdheader
 from helpers import number_format as nfmt
 from helpers import misc as hlpmisc
@@ -49,11 +50,13 @@ def manipulate_header(header, dim):
 
 def get_number_string(filename):
     """Get number string of file from the first number line"""
-    for line in open(filename):
-        if line.startswith('#'):
-            continue
-        else:
-            return line.split()[2]
+    with open(filename) as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            pat = re.compile('\s*[\d+-.]+') # columns with trailing whitespace
+            numstring = pat.findall(line)[2] # 2 because 3rd column contains value in 2D
+            return numstring[1::] # remove delimiting whitespace
 
 
 if __name__ == '__main__':
