@@ -49,15 +49,14 @@ def parse_args():
     return args
 
 
-def calculate_error(folders, filename, avgdir, colvar, shift_region, error_region, ref, refshift):
+def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, refshift):
     """
     Function doing the actual work.
 
     Arguments
     ---------
-    folders       : list with paths of all folders
-    filename      : filename to analyze
-    avgdir     : directory to save averaged fes
+    filenames     : list with paths of all filenames to analyze
+    avgdir        : directory to save averaged fes
     colvar        : numpy array holding the colvar values
     shift_region  : numpy array with booleans for the regions to consider for aligning data
     error_region  : numpy array with booleans for the regions to consider for error calculation
@@ -71,8 +70,8 @@ def calculate_error(folders, filename, avgdir, colvar, shift_region, error_regio
     data = np.empty([len(folders), len(colvar)], dtype=float)
 
     # loop over all folders
-    for j, folder in enumerate(folders):
-        data[j] = np.transpose(np.genfromtxt(os.path.join(folder, filename)))[1] # throw away colvar
+    for j, filename in enumerate(filenames):
+        data[j] = np.transpose(np.genfromtxt(filename))[1] # throw away colvar
 
     # all data is read, calculate error measures
     avgdata = np.average(data, axis=0)
@@ -92,19 +91,21 @@ def calculate_error(folders, filename, avgdir, colvar, shift_region, error_regio
 
     # copy header from one infile and add fields
     fileheader = plmdheader.PlumedHeader()
-    fileheader.parse_file(os.path.join(folders[0], filename))
+    fileheader.parse_file(filenames[0])
     fileheader[0] += ' stddev bias error'
-    fileheader.add_line(' averaged over ' + len(folders) + ' runs')
-    fileheader.add_line(' ERROR_THRESHOLD ' + error_threshold)
+    fileheader.add_line(' averaged over {} runs'.format(len(filenames)))
+    fileheader.add_line(' ERROR_THRESHOLD {}'.format(error_threshold))
 
     # parse number format from FES file
-    fmt_str = nfmt.get_string_from_file(os.path.join(folders[0], filename), 1)
+    fmt_str = nfmt.get_string_from_file(filenames[0], 1)
     fmt = nfmt.NumberFmt(fmt_str)
 
     # write data of current time to file
+    outfile = os.path.join(avgdir, os.path.basename(filenames[0]))
     outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, error)))
-    np.savetxt(avgdir + os.path.sep + filename, np.asmatrix(outdata), header=fileheader,
+    np.savetxt(outfile, np.asmatrix(outdata), header=fileheader,
                comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
+
     return (avgstddev, avgbias, avgerror)
 
 
@@ -149,16 +150,16 @@ if __name__ == '__main__':
     os.mkdir(args.avgdir)
 
     # everything set up, now do the analysis for each time seperately
+    filenames = [[os.path.join(d, f) for d in folders] for f in files]
     pool = Pool(processes=args.numprocs)
     avgstddev, avgbias, avgerror = pool.map(partial(calculate_error,
-                                                    folders=folders,
                                                     avgdir=args.avgdir,
                                                     colvar=colvar,
                                                     shift_region=shift_region,
                                                     error_region=error_region,
                                                     ref=ref,
                                                     refshift=refshift),
-                                            files)
+                                            filenames)
 
     # write averaged values to file
     hlpmisc.backup_if_exists(args.errorfile)
