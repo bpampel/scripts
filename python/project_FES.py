@@ -48,23 +48,12 @@ def manipulate_header(header, dim):
     header.del_lines([i for i, _ in header.search_lines(removed_value)])
 
 
-def get_number_string(filename):
-    """Get number string of file from the first number line"""
-    with open(filename) as f:
-        for line in f:
-            if line.startswith('#'):
-                continue
-            pat = re.compile('\s*[\d+-.]+') # columns with trailing whitespace
-            numstring = pat.findall(line)[2] # 2 because 3rd column contains value in 2D
-            return numstring[1::] # remove delimiting whitespace
-
-
 if __name__ == '__main__':
     # define some constants and values
     args = parse_args()
 
     fes = np.genfromtxt(args.filename)
-    fmt = nfmt.NumberFmt(get_number_string(args.filename))
+    fmt = nfmt.NumberFmt(nfmt.get_string_from_file(args.filename, 2))
     header = plmdheader.PlumedHeader()
     header.parse_file(args.filename)
     manipulate_header(header, args.dim)
