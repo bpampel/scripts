@@ -65,7 +65,10 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
 
     Returns
     -------
-    (avgstddev, avgbias, avgerror) : tuple of three floats
+    [avgstddev, avgbias, avgerror] : list of three floats
+    avgstddev     : average standard deviation in error region
+    avgbias       : average bias in error region
+    avgerror      : combination of both error measures
     """
     data = np.empty([len(folders), len(colvar)], dtype=float)
 
@@ -93,8 +96,8 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     fileheader = plmdheader.PlumedHeader()
     fileheader.parse_file(filenames[0])
     fileheader[0] += ' stddev bias error'
-    fileheader.add_line(' averaged over {} runs'.format(len(filenames)))
-    fileheader.add_line(' ERROR_THRESHOLD {}'.format(error_threshold))
+    fileheader.add_line('SET nruns_avg {}'.format(len(filenames)))
+    fileheader.add_line('SET error_threshold {}'.format(error_threshold))
 
     # parse number format from FES file
     fmt_str = nfmt.get_string_from_file(filenames[0], 1)
@@ -103,24 +106,23 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     # write data of current time to file
     outfile = os.path.join(avgdir, os.path.basename(filenames[0]))
     outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, error)))
-    np.savetxt(outfile, np.asmatrix(outdata), header=fileheader,
+    np.savetxt(outfile, np.asmatrix(outdata), header=str(fileheader),
                comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
 
-    return (avgstddev, avgbias, avgerror)
+    return [avgstddev, avgbias, avgerror]
 
 
 
 if __name__ == '__main__':
     args = parse_args()
+
     # define some constants and empty arrays for storage
     shift_threshold = args.kT * args.shifting_threshold
     shift_threshold = args.kT * args.shifting_threshold
     error_threshold = args.kT * args.error_threshold
     cv_region = True # full range by default
-    avgerror = []
-    avgstddev = []
-    avgbias = []
-
+    fmt_times = '%10d'
+    fmt_error = '%14.9f'
 
     # read reference
     try:
@@ -128,13 +130,11 @@ if __name__ == '__main__':
     except IOError:
         print("Reference file not found!")
 
-
     # get folders and files
     folders = hlpmisc.get_subfolders(args.path)
     if len(folders) == 0:
         raise ValueError("No subfolders found at specified path.")
     files, times = hlpmisc.get_fesfiles(folders[0]) # assumes all folders have the same files
-
 
     # determine regions of interest and create arrays of booleans
     if args.cv_range:
@@ -152,23 +152,18 @@ if __name__ == '__main__':
     # everything set up, now do the analysis for each time seperately
     filenames = [[os.path.join(d, f) for d in folders] for f in files]
     pool = Pool(processes=args.numprocs)
-    avgstddev, avgbias, avgerror = pool.map(partial(calculate_error,
-                                                    avgdir=args.avgdir,
-                                                    colvar=colvar,
-                                                    shift_region=shift_region,
-                                                    error_region=error_region,
-                                                    ref=ref,
-                                                    refshift=refshift),
-                                            filenames)
+    avgvalues = pool.map(partial(calculate_error, avgdir=args.avgdir, colvar=colvar,
+                                 shift_region=shift_region, error_region=error_region,
+                                 ref=ref, refshift=refshift),
+                         filenames)
 
     # write averaged values to file
     hlpmisc.backup_if_exists(args.errorfile)
-    errorheader =     "#! FIELDS time total_error stddev bias"
-    errorheader += ("\n#! SET kT " + str(args.kT))
-    errorheader += ("\n#! SET error_threshold " + str(args.error_threshold))
-    errordata = np.transpose(np.vstack((times, avgerror, avgstddev, avgbias)))
+    errordata = np.column_stack((times, avgvalues))
+    errorheader = plmdheader.PlumedHeader()
+    errorheader.add_line("FIELDS time stddev bias total_error")
+    errorheader.add_line("SET kT {}".format(args.kT))
+    errorheader.add_line("SET error_threshold {}".format(args.error_threshold))
+    fmt = [fmt_times] + 3*[fmt_error]
     np.savetxt(args.errorfile, np.asmatrix(errordata), header=str(errorheader),
-               comments='', fmt='%1.16f', delimiter=' ', newline='\n')
-
-# else:
-    # exit(-1)
+               comments='', fmt=fmt, delimiter=' ', newline='\n')
