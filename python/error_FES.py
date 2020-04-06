@@ -115,8 +115,8 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
         # find out number of bins per direction from header
         nbins = []
         for line in fileheader.search_lines('nbins'):
-            nbins.append(line[1].split(' ')[-1])
-        write_sliced_to_file(data, nbins, outfile, fileheader, fmt.get())
+            nbins.append(int(line[1].split(' ')[-1]))
+        write_sliced_to_file(outdata, nbins, outfile, fileheader, fmt.get())
 
     return [avgstddev, avgbias, avgerror]
 
@@ -139,7 +139,7 @@ def write_sliced_to_file(data, nbins, filename, header, fmts):
     """
     data = data.reshape(*nbins, len(data[0])) # split into rows
     with open(filename, 'w') as outfile:
-        outfile.write(header)
+        outfile.write(str(header) + '\n')
         for row in data[:-1]:
             np.savetxt(outfile, row, comments='', fmt=fmts,
                        delimiter=' ', newline='\n')
