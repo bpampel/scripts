@@ -40,7 +40,8 @@ def parse_args():
                         help="Threshold value of FES (in units of kT) for error area. Defaults to 8",
                         default="8.0")
     parser.add_argument('--cv-range', nargs='+', type=float,
-                        help='CV range to be taken into account. Requires 2 values separated by spaces')
+                        help='CV range to be taken into account. Requires 2 values separated by spaces. \
+                              Will be ignored for more than 2 dimensions')
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
     args = parser.parse_args()
@@ -70,11 +71,12 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     avgbias       : average bias in error region
     avgerror      : combination of both error measures
     """
-    data = np.empty([len(folders), len(colvar)], dtype=float)
+    dim, num_datapoints = colvar.shape
+    data = np.empty([len(folders), num_datapoints], dtype=float)
 
     # loop over all folders
     for j, filename in enumerate(filenames):
-        data[j] = np.transpose(np.genfromtxt(filename))[1] # throw away colvar
+        data[j] = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
 
     # all data is read, calculate error measures
     avgdata = np.average(data, axis=0)
@@ -100,17 +102,50 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     fileheader.add_line('SET error_threshold {}'.format(error_threshold))
 
     # parse number format from FES file
-    fmt_str = nfmt.get_string_from_file(filenames[0], 1)
+    fmt_str = nfmt.get_string_from_file(filenames[0], dim)
     fmt = nfmt.NumberFmt(fmt_str)
 
     # write data of current time to file
     outfile = os.path.join(avgdir, os.path.basename(filenames[0]))
     outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, error)))
-    np.savetxt(outfile, np.asmatrix(outdata), header=str(fileheader),
-               comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
+    if dim == 1:
+        np.savetxt(outfile, np.asmatrix(outdata), header=str(fileheader),
+                   comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
+    if dim == 2:
+        # find out number of bins per direction from header
+        nbins = []
+        for line in fileheader.search_lines('nbins'):
+            nbins.append(line[1].split(' ')[-1])
+        write_sliced_to_file(data, nbins, outfile, fileheader, fmt.get())
 
     return [avgstddev, avgbias, avgerror]
 
+
+def write_sliced_to_file(data, nbins, filename, header, fmts):
+    """
+    Writes 2d data to file including a newline after every row
+
+    Arguments
+    ---------
+    data          : numpy array contaning positions and data information
+    nbins         : list with bin numbers per direction
+    filename      : path to write to
+    header        : plumed_header to write to file
+    fmts          : single format or list of formats for the data columns
+
+    Returns
+    -------
+    Nothing
+    """
+    data = data.reshape(*nbins, len(data[0])) # split into rows
+    with open(filename, 'w') as outfile:
+        outfile.write(header)
+        for row in data[:-1]:
+            np.savetxt(outfile, row, comments='', fmt=fmts,
+                       delimiter=' ', newline='\n')
+            outfile.write('\n')
+        np.savetxt(outfile, data[-1], comments='', fmt=fmts,
+                   delimiter=' ', newline='\n')
 
 
 if __name__ == '__main__':
@@ -124,11 +159,14 @@ if __name__ == '__main__':
     fmt_times = '%10d'
     fmt_error = '%14.9f'
 
-    # read reference
+    # read reference and determine dimensions
     try:
-        colvar, ref = np.transpose(np.genfromtxt(args.ref))
+        ref = np.genfromtxt(args.ref).T
     except IOError:
         print("Reference file not found!")
+    dim = ref.shape[0] - 1
+    colvar = ref[0:dim]
+    ref = ref[dim]
 
     # get folders and files
     folders = hlpmisc.get_subfolders(args.path)
@@ -137,7 +175,7 @@ if __name__ == '__main__':
     files, times = hlpmisc.get_fesfiles(folders[0]) # assumes all folders have the same files
 
     # determine regions of interest and create arrays of booleans
-    if args.cv_range:
+    if args.cv_range and dim==1: # missing implementation for higher dimensions
         if args.cv_range[0] < colvar[0] or args.cv_range[1] > colvar[-1]:
             raise ValueError("Specified CV range is not contained in reference range [{}, {}]"
                              .format(colvar[0], colvar[-1]))
