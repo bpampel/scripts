@@ -87,19 +87,18 @@ def get_outfilenames(outfile, folders):
             outfilenames.append(outfile)
         else:
             dirname = os.path.dirname(outfile)
-            if not dirname: # if only filename without path
+            if not dirname:  # if only filename without path
                 outfilenames = [os.path.join(d, outfile) for d in folders]
                 avgname = os.path.join(os.path.dirname(os.path.dirname(folders[0])), outfile) # same name in base directory
-            else: # put all files in given folder with numbers to differentiate
+            else:  # put all files in given folder with numbers to differentiate
                 basename = os.path.basename(outfile)
                 numbers = [folder.split(os.path.sep)[-2] for folder in folders]
                 outfilenames = [os.path.join(dirname, basename + "." + i) for i in numbers]
                 avgname = os.path.join(dirname, basename + ".avg")
-    else: # no filename given
+    else:  # no filename given
         basename = "delta_F"
         outfilenames = [folder + basename for folder in folders]
-        avgname = os.path.join(os.path.dirname(os.path.dirname(folders[0])), "delta_F") # same name up one directory
-
+        avgname = os.path.join(os.path.dirname(os.path.dirname(folders[0])), "delta_F")  # same name up one directory
 
     return (outfilenames, avgname)
 
@@ -119,7 +118,7 @@ def calculate_delta_F(filename, kT, masks):
     delta_F  : a double containing the free energy difference
     """
 
-    fes = np.genfromtxt(filename).T[-1] # assumes that last column is free energy
+    fes = np.genfromtxt(filename).T[-1]  # assumes that last column is free energy
     if len(fes) != len(masks[0]):
         raise ValueError('Masks and FES of file {} are not of the same length ({} and {})'
                          .format(filename, len(masks[0]), len(fes)))
@@ -139,7 +138,7 @@ def main():
     masks = []
     for m in (args.mask1, args.mask2):
         try:
-            mask = np.genfromtxt(m).astype('bool') # could also save in binary but as int/bool is more readable
+            mask = np.genfromtxt(m).astype('bool')  # could also save in binary but as int/bool is more readable
         except OSError:
             print('Error: Specified masks file "{}" not found'.format(m))
             raise
@@ -154,9 +153,9 @@ def main():
     elif args.fd == 'd':
         folders = hlpmisc.get_subfolders(args.path)
 
-        if not folders: # no subdirectories found - use only given one
+        if not folders:  # no subdirectories found - use only given one
             if args.path[-1] != os.path.sep:
-                args.path += os.path.sep # add possibly missing "/"
+                args.path += os.path.sep  # add possibly missing "/"
             folders = [args.path]
             if args.average:
                 raise ValueError("No subdirectories found. Averaging not possible.")

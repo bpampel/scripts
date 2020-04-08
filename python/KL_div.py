@@ -61,12 +61,12 @@ def kl_div(p, q):
     -------
     kl_div : a double containing the KL divergence
     """
-    x = np.where((p > 0) & (q > 0), p * np.log(p/q), 0) # filter out log(0)
+    x = np.where((p > 0) & (q > 0), p * np.log(p/q), 0)  # filter out log(0)
 
     return np.sum(x)
 
 
-def kl_div_to_ref(filename, ref, kT, dim, inv):
+def kl_div_to_ref(filename, ref, kT, dim):
     """
     Calculates the Kullback-Leibler divergence of a FES file to a reference
 
@@ -86,10 +86,7 @@ def kl_div_to_ref(filename, ref, kT, dim, inv):
         raise ValueError("Number of elements of reference and file " + filename + " does not match")
     prob = fes_to_prob(fes, kT)
 
-    if inv:
-        return kl_div(prob, ref)
-    else:
-        return kl_div(ref, prob)
+    return kl_div(ref, prob)
 
 
 if __name__ == '__main__':

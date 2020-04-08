@@ -6,7 +6,6 @@ Currently only 2d -> 1d
 
 import argparse
 import numpy as np
-import re
 from helpers import plumed_header as plmdheader
 from helpers import number_format as nfmt
 from helpers import misc as hlpmisc
