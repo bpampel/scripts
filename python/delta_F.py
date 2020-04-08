@@ -58,14 +58,25 @@ def parse_args():
             raise ValueError("-avg without -d doesn't make sense.")
         if args.outfile:
             print("Single file given. Ignoring outfile argument.")
-    if args.mask1 and not args.mask2:
-        raise ValueError("Only one mask file specified. Please specify the second one as well.")
 
     return args
 
 
 def get_outfilenames(outfile, folders):
-    """decide on outfile names depending on cli arguments given"""
+    """
+    decide on outfile names depending on cli arguments given
+
+    Arguments
+    ---------
+    outfile  : user specified outfile name/path
+    folders  : list with all folders to evaluate
+
+    Returns
+    -------
+    (outfilenames, avgname) : tuple
+    outfilenames            : list containing the outfile name for each folder
+    avgname                 : string with the path for the avg file
+    """
     outfilenames = []
     avgname = None
     if outfile:
@@ -77,10 +88,9 @@ def get_outfilenames(outfile, folders):
         else:
             dirname = os.path.dirname(outfile)
             if not dirname: # if only filename without path
-                outfilenames = [folder + outfile for folder in folders]
+                outfilenames = [os.path.join(d, outfile) for d in folders]
                 avgname = os.path.join(os.path.dirname(os.path.dirname(folders[0])), outfile) # same name in base directory
             else: # put all files in given folder with numbers to differentiate
-                dirname = os.path.dirname(outfile)
                 basename = os.path.basename(outfile)
                 numbers = [folder.split(os.path.sep)[-2] for folder in folders]
                 outfilenames = [os.path.join(dirname, basename + "." + i) for i in numbers]
@@ -111,7 +121,8 @@ def calculate_delta_F(filename, kT, masks):
 
     fes = np.genfromtxt(filename).T[-1] # assumes that last column is free energy
     if len(fes) != len(masks[0]):
-        raise ValueError('Masks and FES are not of the same length ({} and {})'.format(masks[0], len(fes)))
+        raise ValueError('Masks and FES of file {} are not of the same length ({} and {})'
+                         .format(filename, len(masks[0]), len(fes)))
 
     probabilities = np.exp(- fes / float(kT))
     state_probs = [np.sum(probabilities[m]) for m in masks]
@@ -120,8 +131,10 @@ def calculate_delta_F(filename, kT, masks):
 
 
 def main():
-    # read in cli arguments
+    # read in cli arguments, define constants
     args = parse_args()
+    fmt_times = '%10d'
+    fmt_error = '%14.9f'
 
     masks = []
     for m in (args.mask1, args.mask2):
@@ -132,10 +145,11 @@ def main():
             raise
         masks.append(mask)
     if len(masks[0]) != len(masks[1]):
-        raise ValueError('Masks are not of the same length ({} and {})'.format(masks[0], masks[1]))
+        raise ValueError('Masks are not of the same length ({} and {})'
+                         .format(len(masks[0]), len(masks[1])))
 
     if args.fd == 'f':
-        print(calculate_delta_F(args.path, args.kT, masks))
+        print(fmt_error % calculate_delta_F(args.path, args.kT, masks))
 
     elif args.fd == 'd':
         folders = hlpmisc.get_subfolders(args.path)
@@ -154,22 +168,28 @@ def main():
 
         pool = Pool(processes=args.numprocs)
 
-        allfilenames = [folder + file for folder in folders for file in files]
+        allfilenames = [os.path.join(d, f) for d in folders for f in files]
         delta_F = pool.map(partial(calculate_delta_F, kT=args.kT, masks=masks), allfilenames)
-        delta_F = np.array(delta_F).reshape(len(folders),len(files))
+        delta_F = np.array(delta_F).reshape(len(folders), len(files))
 
         header = plmdheader.PlumedHeader()
         header.add_line('FIELDS time delta_F')
         header.add_line('SET kT {}'.format(args.kT))
+        fmt = [fmt_times] + [fmt_error]
 
-        for i, folder in enumerate(folders):
-            np.savetxt(outfilenames[i], np.vstack((times, delta_F[i])).T, header=str(header))
+        for i, f in enumerate(outfilenames):
+            hlpmisc.backup_if_exists(f)
+            np.savetxt(f, np.vstack((times, delta_F[i])).T, header=str(header), fmt=fmt,
+                       comments='', delimiter=' ', newline='\n')
 
         if args.average:
-            header[0] = 'FIELDS time delta_F.avg delta_F.stddev'
             avg_delta_F = np.average(delta_F, axis=0)
             stddev = np.std(delta_F, axis=0, ddof=1)
-            np.savetxt(avgfilename, np.vstack((times, avg_delta_F, stddev)).T, header=str(header))
+            header[0] += '.avg delta_F.stddev'
+            fmt += [fmt_error]
+            hlpmisc.backup_if_exists(avgfilename)
+            np.savetxt(avgfilename, np.vstack((times, avg_delta_F, stddev)).T, header=str(header),
+                       fmt=fmt, comments='', delimiter=' ', newline='\n')
 
 
 if __name__ == '__main__':
