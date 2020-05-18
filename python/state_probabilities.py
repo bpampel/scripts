@@ -130,7 +130,9 @@ def main():
                          .format([len(m) for m in masks]))
 
     if args.fd == 'f':
-        print(fmt_probs % calculate_state_probabilities(args.path, args.kT, masks))
+        probs = calculate_state_probabilities(args.path, args.kT, masks)
+        for p in probs:
+            print(fmt_probs % p)
 
     elif args.fd == 'd':
         folders = hlpmisc.get_subfolders(args.path)
@@ -149,7 +151,7 @@ def main():
 
         allfilenames = [os.path.join(d, f) for d in folders for f in files]
         probs = pool.map(partial(calculate_state_probabilities, kT=args.kT, masks=masks), allfilenames)
-        probs = np.array(delta_F).reshape(len(folders), len(files), len(masks))
+        probs = np.array(probs).reshape(len(folders), len(files), len(masks))
 
         header = plmdheader.PlumedHeader()
         fields = 'FIELDS time'
@@ -161,7 +163,7 @@ def main():
 
         for i, f in enumerate(outfilenames):
             hlpmisc.backup_if_exists(f)
-            np.savetxt(f, np.vstack((times, probs[i])).T, header=str(header), fmt=fmt,
+            np.savetxt(f, np.vstack((times, probs[i].T)).T, header=str(header), fmt=fmt,
                        comments='', delimiter=' ', newline='\n')
 
 if __name__ == '__main__':
