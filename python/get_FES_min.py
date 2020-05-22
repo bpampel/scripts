@@ -31,8 +31,10 @@ def main():
     files, times = hlpmisc.get_fesfiles(folders[0]) # assumes all folders have the same files
     paths = [os.path.join(d, f) for d in folders for f in files]
 
-    pool = Pool(processes=args.numprocs)
-    min_positions = pool.map(get_min_pos, paths)
+    # pool = Pool(processes=args.numprocs)
+    min_positions = []
+    for p in paths:
+        min_positions.append(get_min_pos(p))
     min_positions= np.array(min_positions).reshape(len(folders),len(files)) # put in matrix form
 
     fmt = [fmt_times] + [fmt_colvar] * len(folders)
