@@ -17,8 +17,8 @@ def parse_args():
 
 def get_min_pos(filename):
     """Get minimum position of FES"""
-    fes, colvar = np.genfromtxt(filename).T[0:2]
-    return colvar[np.where(fes == np.nanmin(fes))][0] # only first minimum...
+    colvar, fes = np.genfromtxt(filename).T[0:2]  # works only for 1d FES
+    return colvar[np.where(fes == np.nanmin(fes))][0]  # only first minimum… good enough
 
 
 def main():
@@ -31,10 +31,8 @@ def main():
     files, times = hlpmisc.get_fesfiles(folders[0]) # assumes all folders have the same files
     paths = [os.path.join(d, f) for d in folders for f in files]
 
-    # pool = Pool(processes=args.numprocs)
-    min_positions = []
-    for p in paths:
-        min_positions.append(get_min_pos(p))
+    pool = Pool(processes=args.numprocs)
+    min_positions = pool.map(get_min_pos, paths)
     min_positions= np.array(min_positions).reshape(len(folders),len(files)) # put in matrix form
 
     fmt = [fmt_times] + [fmt_colvar] * len(folders)
