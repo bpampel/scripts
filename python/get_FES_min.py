@@ -36,7 +36,7 @@ def main():
     min_positions= np.array(min_positions).reshape(len(folders),len(files)) # put in matrix form
 
     fmt = [fmt_times] + [fmt_colvar] * len(folders)
-    np.savetxt("min_positions", np.vstack(times,min_positions), fmt=fmt)
+    np.savetxt("min_positions", np.vstack((times,min_positions)).T, fmt=fmt)
 
 
 if __name__ == '__main__':
