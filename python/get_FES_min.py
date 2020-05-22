@@ -10,12 +10,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('path',
                         help="Path to the folder to be evaluated")
+    parser.add_argument("-np", "--numprocs", type=int, default="1",
+                        help="Number of parallel processes")
     args = parser.parse_args()
     return args
 
 def get_min_pos(filename):
     """Get minimum position of FES"""
-    colvar, fes = np.genfromtxt(filename).T[0:2] # only for 1dfes
+    fes, colvar = np.genfromtxt(filename).T[0:2]
     return colvar[np.where(fes == np.nanmin(fes))][0] # only first minimum...
 
 
@@ -27,7 +29,7 @@ def main():
 
     folders = hlpmisc.get_subfolders(args.path)
     files, times = hlpmisc.get_fesfiles(folders[0]) # assumes all folders have the same files
-    paths = [[os.path.join(d, f) for d in folders] for f in files]
+    paths = [os.path.join(d, f) for d in folders for f in files]
 
     pool = Pool(processes=args.numprocs)
     min_positions = pool.map(get_min_pos, paths)
