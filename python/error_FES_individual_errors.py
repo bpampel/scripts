@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('-r', '--ref',
                         help="Path to the reference FES file",
                         required=True)
-    parser.add_argument('-kt', '--kT', type=float,
+    parser.add_argument('-kT', '--kT', type=float,
                         help="Value of kT for the FES file (in matching units)",
                         required=True)
     parser.add_argument("-o", "--outfile",
@@ -144,7 +144,7 @@ def main():
     avgfile = os.path.join(args.path, args.outfile)  # in base dir
     hlpmisc.backup_if_exists(avgfile)
     fileheader[0] = "FIELDS time avg_error stddev"
-    fileheader.add_line('SET nruns_avg {}'.format(len(filepaths)))
+    fileheader.add_line('SET nruns_avg {}'.format(len(folders)))
     fmt.append(fmt_error)
     np.savetxt(avgfile, np.vstack((times, avg_error, stddev)).T, header=str(fileheader),
                comments='', fmt=fmt, delimiter=' ', newline='\n')
