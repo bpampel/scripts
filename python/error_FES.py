@@ -192,18 +192,20 @@ if __name__ == '__main__':
     error_region = np.array([ref < error_threshold]) & cv_region
     refshift = np.average(np.extract(shift_region, ref))
 
-    hlpmisc.backup_if_exists(args.avgdir)
-    os.mkdir(args.avgdir)
+    avgdir = os.path.join(args.path, args.avgdir)
+    hlpmisc.backup_if_exists(avgdir)
+    os.mkdir(avgdir)
 
     # everything set up, now do the analysis for each time seperately
     filenames = [[os.path.join(d, f) for d in folders] for f in files]
     pool = Pool(processes=args.numprocs)
-    avgvalues = pool.map(partial(calculate_error, avgdir=args.avgdir, colvar=colvar,
+    avgvalues = pool.map(partial(calculate_error, avgdir=avgdir, colvar=colvar,
                                  shift_region=shift_region, error_region=error_region,
                                  ref=ref, refshift=refshift, ind_shift=args.individual_shifts),
                          filenames)
 
     # write averaged values to file
+    errorfile = os.path.join(args.path, args.errorfile)
     hlpmisc.backup_if_exists(args.errorfile)
     errordata = np.column_stack((times, avgvalues))
     errorheader = plmdheader.PlumedHeader()
@@ -211,5 +213,5 @@ if __name__ == '__main__':
     errorheader.add_line("SET kT {}".format(args.kT))
     errorheader.add_line("SET error_threshold {}".format(args.error_threshold))
     fmt = [fmt_times] + 3*[fmt_error]
-    np.savetxt(args.errorfile, np.asmatrix(errordata), header=str(errorheader),
+    np.savetxt(errorfile, np.asmatrix(errordata), header=str(errorheader),
                comments='', fmt=fmt, delimiter=' ', newline='\n')
