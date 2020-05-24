@@ -44,13 +44,15 @@ def parse_args():
                               Will be ignored for more than 2 dimensions')
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
+    parser.add_argument("--individual-shifts", action='store_true', dest="individual_shifts",
+                        help="Shift the individual FES instead of the average")
     args = parser.parse_args()
     if args.cv_range and len(args.cv_range) != 2:
         raise ValueError("--cv-range requires 2 values separated by spaces")
     return args
 
 
-def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, refshift):
+def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, refshift, ind_shift):
     """
     Function doing the actual work.
 
@@ -74,17 +76,23 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     dim, num_datapoints = colvar.shape
     data = np.empty([len(folders), num_datapoints], dtype=float)
 
+    if ind_shift:
+        for j, filename in enumerate(filenames):
+            fes = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
+            data[j] = fes - np.average(np.extract(shift_region, fes)) + refshift
+    else:
     # loop over all folders
-    for j, filename in enumerate(filenames):
-        data[j] = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
+        for j, filename in enumerate(filenames):
+            data[j] = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
 
     # all data is read, calculate error measures
     avgdata = np.average(data, axis=0)
     stddev = np.std(data, axis=0, ddof=1, dtype=np.float64)
     avgstddev = np.average(np.extract(error_region, stddev))
 
-    avgshift = np.average(np.extract(shift_region, avgdata))
-    avgdata = avgdata - avgshift + refshift
+    if not ind_shift:
+        avgshift = np.average(np.extract(shift_region, avgdata))
+        avgdata = avgdata - avgshift + refshift
 
     # calculate bias
     bias = np.absolute(avgdata - ref)
@@ -192,7 +200,7 @@ if __name__ == '__main__':
     pool = Pool(processes=args.numprocs)
     avgvalues = pool.map(partial(calculate_error, avgdir=args.avgdir, colvar=colvar,
                                  shift_region=shift_region, error_region=error_region,
-                                 ref=ref, refshift=refshift),
+                                 ref=ref, refshift=refshift, ind_shift=args.individual_shifts),
                          filenames)
 
     # write averaged values to file
