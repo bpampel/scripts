@@ -126,7 +126,7 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
             nbins.append(int(line[1].split(' ')[-1]))
         write_sliced_to_file(outdata, nbins, outfile, fileheader, fmt.get())
 
-    return [avgstddev, avgbias, avgerror]
+    return [avgbias, avgstddev, avgerror]
 
 
 def write_sliced_to_file(data, nbins, filename, header, fmts):
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     hlpmisc.backup_if_exists(args.errorfile)
     errordata = np.column_stack((times, avgvalues))
     errorheader = plmdheader.PlumedHeader()
-    errorheader.add_line("FIELDS time stddev bias total_error")
+    errorheader.add_line("FIELDS time bias stddev total_error")
     errorheader.add_line("SET kT {}".format(args.kT))
     errorheader.add_line("SET error_threshold {}".format(args.error_threshold))
     fmt = [fmt_times] + 3*[fmt_error]
