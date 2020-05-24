@@ -118,10 +118,11 @@ def main():
 
     # everything set up, now calculate errors for all files
     filepaths = [os.path.join(d, f) for d in folders for f in files]
-    pool = Pool(processes=args.numprocs)
-    errors = pool.map(partial(calculate_error, dim=dim, shift_region=shift_region,
-                              error_region=error_region, ref=ref, refshift=refshift,
-                              metric=args.error_metric), filepaths)
+    errors = []
+    for p in filepaths:
+        errors.append(calculate_error(p, dim=dim, shift_region=shift_region,
+                                      error_region=error_region, ref=ref, refshift=refshift,
+                                      metric=args.error_metric))
     errors = np.array(errors).reshape(len(folders),len(files))  # put in matrix form
 
     # write error for each folder to file
