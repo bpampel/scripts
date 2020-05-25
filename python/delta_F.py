@@ -38,11 +38,8 @@ def parse_args():
     # parser.add_argument("-t", "--threshold", type=float,
                         # help="Probability threshold of basins",
                         # default="0.0")
-    parser.add_argument("-m1", "--mask1",
-                        help="File containing mask of first basin",
-                        required=True)
-    parser.add_argument("-m2", "--mask2",
-                        help="File containing mask of second basin",
+    parser.add_argument("-m", "--masks", nargs='+',
+                        help="Path to files containing the state masks.",
                         required=True)
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
@@ -104,18 +101,19 @@ def get_outfilenames(outfile, folders):
 
 
 def calculate_delta_F(filename, kT, masks):
-    """
-    Calculates the free energy difference between two states
+    """Calculates the free energy difference between states
+
+    If more than two are specified, this returns the difference to the first state for all others
 
     Arguments
     ---------
     filename : path to the fes file
     kT       : energy in units of kT
-    masks    : a list of two boolean numpy arrays resembling the two states
+    masks    : a list of boolean numpy arrays resembling the states
 
     Returns
     -------
-    delta_F  : a double containing the free energy difference
+    delta_F  : a list of doubles containing the free energy difference to the first state
     """
 
     fes = np.genfromtxt(filename).T[-1]  # assumes that last column is free energy
@@ -125,7 +123,7 @@ def calculate_delta_F(filename, kT, masks):
 
     probabilities = np.exp(- fes / float(kT))
     state_probs = [np.sum(probabilities[m]) for m in masks]
-    delta_F = - kT * np.log(state_probs[0]/state_probs[1])
+    delta_F = [- kT * np.log(state_probs[masks[0]]/state_probs[masks[i]]) for i in range(1, len(masks))]
     return delta_F
 
 
@@ -136,16 +134,16 @@ def main():
     fmt_error = '%14.9f'
 
     masks = []
-    for m in (args.mask1, args.mask2):
+    for m in args.mask:
         try:
             mask = np.genfromtxt(m).astype('bool')  # could also save in binary but as int/bool is more readable
         except OSError:
             print('Error: Specified masks file "{}" not found'.format(m))
             raise
         masks.append(mask)
-    if len(masks[0]) != len(masks[1]):
-        raise ValueError('Masks are not of the same length ({} and {})'
-                         .format(len(masks[0]), len(masks[1])))
+    if not all(len(m) == len(masks[0]) for m in masks):
+        raise ValueError('Masks are not of the same length ({})'
+                         .format(*[len(m) for m in masks]))
 
     if args.fd == 'f':
         print(fmt_error % calculate_delta_F(args.path, args.kT, masks))
@@ -172,7 +170,12 @@ def main():
         delta_F = np.array(delta_F).reshape(len(folders), len(files))
 
         header = plmdheader.PlumedHeader()
-        header.add_line('FIELDS time delta_F')
+        fieldsline = 'FIELDS time'
+        if len(masks) == 2:
+            fieldsline += ' delta_F'
+        else:
+            fieldsline += ''.join([' delta_F_1_' + str(i) for i in range(2,len(masks)+1)])
+        header.add_line(fieldsline)
         header.add_line('SET kT {}'.format(args.kT))
         fmt = [fmt_times] + [fmt_error]
 
