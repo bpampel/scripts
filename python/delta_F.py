@@ -28,7 +28,7 @@ def parse_args():
                        help="Parse one or multiple directories. \
                              Looks for all numbered [0-9]* subfolders \
                              or works on the directory itself.")
-    parser.add_argument("-avg", "--average", action='store_true',
+    parser.add_argument('-avg', '--average', action='store_true',
                         help="Also calculate average over runs. \
                               Requires the --dir flag.")
     # parser.add_argument("-A", "--stateA", '-nargs', nargs='+', type=float,
@@ -38,13 +38,13 @@ def parse_args():
     # parser.add_argument("-t", "--threshold", type=float,
                         # help="Probability threshold of basins",
                         # default="0.0")
-    parser.add_argument("-m", "--masks", nargs='+',
+    parser.add_argument('-m', '--masks', type=argparse.FileType('r'), nargs='+',
                         help="Path to files containing the state masks.",
                         required=True)
-    parser.add_argument("-np", "--numprocs", type=int, default="1",
+    parser.add_argument('-np', '--numprocs', type=int, default='1',
                         help="Number of parallel processes")
-    parser.add_argument("-o", "--outfile",
-                        help='Name of the output file(s). Default is "delta_F"')
+    parser.add_argument('-o', '--outfile',
+                        help="Name of the output file(s). Default is 'delta_F'")
     parser.set_defaults(fd='f')
 
     args = parser.parse_args()
@@ -123,7 +123,7 @@ def calculate_delta_F(filename, kT, masks):
 
     probabilities = np.exp(- fes / float(kT))
     state_probs = [np.sum(probabilities[m]) for m in masks]
-    delta_F = [- kT * np.log(state_probs[masks[0]]/state_probs[masks[i]]) for i in range(1, len(masks))]
+    delta_F = [- kT * np.log(state_probs[i]/state_probs[0]) for i in range(1, len(state_probs))]
     return delta_F
 
 
@@ -134,13 +134,14 @@ def main():
     fmt_error = '%14.9f'
 
     masks = []
-    for m in args.mask:
+    for m in args.masks:
         try:
             mask = np.genfromtxt(m).astype('bool')  # could also save in binary but as int/bool is more readable
         except OSError:
             print('Error: Specified masks file "{}" not found'.format(m))
             raise
         masks.append(mask)
+    num_states = len(masks)
     if not all(len(m) == len(masks[0]) for m in masks):
         raise ValueError('Masks are not of the same length ({})'
                          .format(*[len(m) for m in masks]))
@@ -167,27 +168,37 @@ def main():
 
         allfilenames = [os.path.join(d, f) for d in folders for f in files]
         delta_F = pool.map(partial(calculate_delta_F, kT=args.kT, masks=masks), allfilenames)
-        delta_F = np.array(delta_F).reshape(len(folders), len(files))
+        delta_F = np.array(delta_F).reshape((len(folders), len(files), num_states-1))
 
         header = plmdheader.PlumedHeader()
-        fieldsline = 'FIELDS time'
-        if len(masks) == 2:
-            fieldsline += ' delta_F'
+        fields = ['FIELDS', 'time']
+        if num_states == 2:
+            fields.append('deltaF')
         else:
-            fieldsline += ''.join([' delta_F_1_' + str(i) for i in range(2,len(masks)+1)])
-        header.add_line(fieldsline)
+            fields += ['deltaF_1_' + str(i) for i in range(2,num_states+1)]
+        header.add_line(' '.join(fields))
         header.add_line('SET kT {}'.format(args.kT))
-        fmt = [fmt_times] + [fmt_error]
+        fmt = [fmt_times] + [fmt_error]*(num_states-1)
 
         for i, f in enumerate(outfilenames):
+            # if len(folders) == 1:  # delta_F contains only one dataset
+                # outdata = np.vstack((times,delta_F.T)).T
+            # else:
+            outdata = np.vstack((times,delta_F[i].T)).T
             hlpmisc.backup_if_exists(f)
-            np.savetxt(f, np.vstack((times, delta_F[i])).T, header=str(header), fmt=fmt,
+            np.savetxt(f, outdata, header=str(header), fmt=fmt,
                        comments='', delimiter=' ', newline='\n')
 
         if args.average:
             avg_delta_F = np.average(delta_F, axis=0)
             stddev = np.std(delta_F, axis=0, ddof=1)
-            header[0] += '.avg delta_F.stddev'
+            fields = ['FIELDS', 'time']
+            if num_states == 2:
+                fields += ['deltaF.avg', 'deltaF.stddev']
+            else:
+                fieldsline += ['deltaF_1_' + str(i) + '.avg' for i in range(2,num_states+1)]
+                fieldsline += ['deltaF_1_' + str(i) + '.stddev' for i in range(2,num_states+1)]
+            header[0] = ' '.join(fields)
             fmt += [fmt_error]
             hlpmisc.backup_if_exists(avgfilename)
             np.savetxt(avgfilename, np.vstack((times, avg_delta_F, stddev)).T, header=str(header),
