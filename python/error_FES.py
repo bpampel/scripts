@@ -107,7 +107,6 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     fileheader.parse_file(filenames[0])
     fileheader[0] += ' bias stddev error'
     fileheader.add_line('SET nruns_avg {}'.format(len(filenames)))
-    fileheader.add_line('SET error_threshold {}'.format(error_threshold))
 
     # parse number format from FES file
     fmt_str = nfmt.get_string_from_file(filenames[0], dim)
@@ -211,6 +210,7 @@ if __name__ == '__main__':
     errorheader = plmdheader.PlumedHeader()
     errorheader.add_line("FIELDS time bias stddev total_error")
     errorheader.add_line("SET kT {}".format(args.kT))
+    errorheader.add_line("SET shift_threshold {}".format(args.shift_threshold))
     errorheader.add_line("SET error_threshold {}".format(args.error_threshold))
     fmt = [fmt_times] + 3*[fmt_error]
     np.savetxt(errorfile, np.asmatrix(errordata), header=str(errorheader),
