@@ -76,12 +76,12 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     dim, num_datapoints = colvar.shape
     data = np.empty([len(folders), num_datapoints], dtype=float)
 
+    # read in all FES
     if ind_shift:
         for j, filename in enumerate(filenames):
             fes = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
             data[j] = fes - np.average(np.extract(shift_region, fes)) + refshift
     else:
-    # loop over all folders
         for j, filename in enumerate(filenames):
             data[j] = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
 
@@ -105,7 +105,7 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     # copy header from one infile and add fields
     fileheader = plmdheader.PlumedHeader()
     fileheader.parse_file(filenames[0])
-    fileheader[0] += ' stddev bias error'
+    fileheader[0] += ' bias stddev error'
     fileheader.add_line('SET nruns_avg {}'.format(len(filenames)))
     fileheader.add_line('SET error_threshold {}'.format(error_threshold))
 
@@ -115,7 +115,7 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
 
     # write data of current time to file
     outfile = os.path.join(avgdir, os.path.basename(filenames[0]))
-    outdata = np.transpose(np.vstack((colvar, avgdata, stddev, bias, error)))
+    outdata = np.transpose(np.vstack((colvar, avgdata, bias, stddev, error)))
     if dim == 1:
         np.savetxt(outfile, np.asmatrix(outdata), header=str(fileheader),
                    comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
