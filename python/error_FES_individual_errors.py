@@ -41,18 +41,18 @@ def parse_args():
                               Will be ignored for more than 2 dimensions")
     parser.add_argument("-np", "--numprocs", type=int, default="1",
                         help="Number of parallel processes")
-    parser.add_argument("-em", "--error-metric", dest='error_metric', default='absolut',
+    parser.add_argument("-em", "--error-metric", dest='error_metric', default='rmsd',
                         help="Metric for combining the errors. \
-                              Accepts 'absolut' (mean absolut error) and 'rms'. Defaults to 'absolut'")
+                              Accepts 'absolute' (mean absolute error) and 'rmsd'. Defaults to 'rmsd'")
     args = parser.parse_args()
     if args.cv_range and len(args.cv_range) != 2:
         raise ValueError("--cv-range requires 2 values separated by spaces")
-    if args.error_metric not in ['absolut', 'rms']:
-        raise ValueError("Metric must be 'absolut' or 'rms'")
+    if args.error_metric not in ['absolute', 'rmsd']:
+        raise ValueError("Metric must be 'absolute' or 'rmsd'")
     return args
 
 
-def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, metric='absolut'):
+def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, metric='rsmd'):
     """ Calculate error of FES wrt reference
 
     This shifts the read in FES by the average in the given region and then calculates the
@@ -66,7 +66,7 @@ def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, me
     error_region  : numpy array with booleans for the regions to consider for error calculation
     ref           : numpy array holding the reference values
     refshift      : average value of ref in shift region
-    metric        : used metric for averaging errors. Accepts either 'absolut' or 'rms'
+    metric        : used metric for averaging errors. Accepts either 'absolute' or 'rms'
 
     Returns
     -------
@@ -74,14 +74,14 @@ def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, me
     """
     fes = np.transpose(np.genfromtxt(filepath))[dim]  # throw away colvar
     fes = fes - np.average(np.extract(shift_region, fes)) + refshift
-    if metric == 'absolut':
+    if metric == 'absolute':
         error = np.abs(fes - ref)
         return np.average(np.extract(error_region, error))
-    elif metric == 'rms':
+    elif metric == 'rmsd':
         error = (fes - ref)**2
         return np.sqrt(np.average(np.extract(error_region, error)))
     else:
-        raise ValueError("Metric must be 'absolut' or 'rms'")
+        raise ValueError("Metric must be 'absolute' or 'rmsd'")
 
 
 def main():
@@ -133,6 +133,7 @@ def main():
     fileheader.add_line("SET kT {}".format(args.kT))
     fileheader.add_line("SET shift_threshold {}".format(args.shift_threshold))
     fileheader.add_line("SET error_threshold {}".format(args.error_threshold))
+    fileheader.add_line("SET error_metric {}".format(args.error_metric))
     fmt = [fmt_times] + [fmt_error]
     for i, folder in enumerate(folders):
         errorfile = os.path.join(folder, args.outfile)
