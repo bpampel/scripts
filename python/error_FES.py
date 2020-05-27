@@ -33,10 +33,10 @@ def parse_args():
     parser.add_argument("--errorfile",
                         help='Name of the file for the error values. Default is "error.txt"',
                         default="error.txt")
-    parser.add_argument("-st", "--shifting_threshold", type=float,
+    parser.add_argument("-st", "--shift-threshold", type=float, dest='shift_threshold',
                         help="Threshold value of FES (in units of kT) for shifting area. Defaults to 4",
                         default="4.0")
-    parser.add_argument("-et", "--error_threshold", type=float,
+    parser.add_argument("-et", "--error-threshold", type=float, dest='error_threshold',
                         help="Threshold value of FES (in units of kT) for error area. Defaults to 8",
                         default="8.0")
     parser.add_argument('--cv-range', nargs='+', type=float,
@@ -159,8 +159,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     # define some constants and empty arrays for storage
-    shift_threshold = args.kT * args.shifting_threshold
-    shift_threshold = args.kT * args.shifting_threshold
+    shift_threshold = args.kT * args.shift_threshold
     error_threshold = args.kT * args.error_threshold
     cv_region = True # full range by default
     fmt_times = '%10d'
