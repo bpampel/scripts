@@ -204,7 +204,7 @@ if __name__ == '__main__':
 
     # write averaged values to file
     errorfile = os.path.join(args.path, args.errorfile)
-    hlpmisc.backup_if_exists(args.errorfile)
+    hlpmisc.backup_if_exists(errorfile)
     errordata = np.column_stack((times, avgvalues))
     errorheader = plmdheader.PlumedHeader()
     errorheader.add_line("FIELDS time bias stddev total_error")
