@@ -41,6 +41,9 @@ def parse_args():
     parser.add_argument('-m', '--masks', type=argparse.FileType('r'), nargs='+',
                         help="Path to files containing the state masks.",
                         required=True)
+    parser.add_argument('-c', '--column', type=int, default='-1', dest='col',
+                        help="Column that contains the free energy starting at 0. \
+                        Defaults to -1 (the last).")
     parser.add_argument('-np', '--numprocs', type=int, default='1',
                         help="Number of parallel processes")
     parser.add_argument('-o', '--outfile',
@@ -100,7 +103,7 @@ def get_outfilenames(outfile, folders):
     return (outfilenames, avgname)
 
 
-def calculate_delta_F(filename, kT, masks):
+def calculate_delta_F(filename, kT, masks, col):
     """Calculates the free energy difference between states
 
     If more than two are specified, this returns the difference to the first state for all others
@@ -110,13 +113,14 @@ def calculate_delta_F(filename, kT, masks):
     filename : path to the fes file
     kT       : energy in units of kT
     masks    : a list of boolean numpy arrays resembling the states
+    col      : the file column containing the fes
 
     Returns
     -------
     delta_F  : a list of doubles containing the free energy difference to the first state
     """
 
-    fes = np.genfromtxt(filename).T[-1]  # assumes that last column is free energy
+    fes = np.genfromtxt(filename).T[col]  # assumes that last column is free energy
     if len(fes) != len(masks[0]):
         raise ValueError('Masks and FES of file {} are not of the same length ({} and {})'
                          .format(filename, len(masks[0]), len(fes)))
@@ -147,7 +151,7 @@ def main():
                          .format(*[len(m) for m in masks]))
 
     if args.fd == 'f':
-        print(fmt_error % calculate_delta_F(args.path, args.kT, masks))
+        print(fmt_error % calculate_delta_F(args.path, args.kT, masks, args.col))
 
     elif args.fd == 'd':
         folders = hlpmisc.get_subfolders(args.path)
@@ -167,7 +171,7 @@ def main():
         pool = Pool(processes=args.numprocs)
 
         allfilenames = [os.path.join(d, f) for d in folders for f in files]
-        delta_F = pool.map(partial(calculate_delta_F, kT=args.kT, masks=masks), allfilenames)
+        delta_F = pool.map(partial(calculate_delta_F, kT=args.kT, masks=masks, col=args.col), allfilenames)
         delta_F = np.array(delta_F).reshape((len(folders), len(files), num_states-1))
 
         header = plmdheader.PlumedHeader()
@@ -184,7 +188,7 @@ def main():
             # if len(folders) == 1:  # delta_F contains only one dataset
                 # outdata = np.vstack((times,delta_F.T)).T
             # else:
-            outdata = np.vstack((times,delta_F[i].T)).T
+            outdata = np.c_[times, delta_F[i]]
             hlpmisc.backup_if_exists(f)
             np.savetxt(f, outdata, header=str(header), fmt=fmt,
                        comments='', delimiter=' ', newline='\n')
@@ -192,6 +196,7 @@ def main():
         if args.average:
             avg_delta_F = np.average(delta_F, axis=0)
             stddev = np.std(delta_F, axis=0, ddof=1)
+            outdata = np.c_[times, avg_delta_F, stddev]
             fields = ['FIELDS', 'time']
             if num_states == 2:
                 fields += ['deltaF.avg', 'deltaF.stddev']
@@ -201,7 +206,7 @@ def main():
             header[0] = ' '.join(fields)
             fmt += [fmt_error]
             hlpmisc.backup_if_exists(avgfilename)
-            np.savetxt(avgfilename, np.vstack((times, avg_delta_F, stddev)).T, header=str(header),
+            np.savetxt(avgfilename, outdata, header=str(header),
                        fmt=fmt, comments='', delimiter=' ', newline='\n')
 
 
