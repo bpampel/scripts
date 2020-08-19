@@ -1,0 +1,32 @@
+# vim:ft=plumed
+UNITS LENGTH=A ENERGY=eV
+
+dist: READ FILE=colvar.data IGNORE_TIME VALUES=dist
+coord: READ FILE=colvar.data IGNORE_TIME VALUES=coord
+metad: READ FILE=colvar.data IGNORE_TIME VALUES=metad.rbias
+
+weights: REWEIGHT_METAD TEMP=300
+
+HISTOGRAM ...
+  ARG=dist,coord
+  GRID_MIN=2,5
+  GRID_MAX=12,9
+  GRID_BIN=300,300
+  BANDWIDTH=0.05,0.05
+  LOGWEIGHTS=weights
+  LABEL=hist
+... HISTOGRAM
+
+# HISTOGRAM ...
+#   ARG=dist
+#   GRID_MIN=1.55487
+#   GRID_MAX=20.723
+#   GRID_BIN=273
+#   KERNEL=DISCRETE
+#   LOGWEIGHTS=weights
+#   LABEL=hist
+# ... HISTOGRAM
+
+fes: CONVERT_TO_FES GRID=hist TEMP=300
+
+DUMPGRID GRID=fes FILE=fes FMT=%24.16e

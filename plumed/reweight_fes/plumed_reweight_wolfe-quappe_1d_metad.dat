@@ -1,0 +1,21 @@
+# vim:ft=plumed
+UNITS NATURAL
+
+p: READ FILE=colvar.data IGNORE_TIME VALUES=p.x
+metad: READ FILE=colvar.data IGNORE_TIME VALUES=metad.bias
+
+weights: REWEIGHT_BIAS TEMP=0.5 ARG=metad.bias
+
+HISTOGRAM ...
+  ARG=p.x
+  GRID_MIN=-3
+  GRID_MAX=3
+  GRID_BIN=300
+  BANDWIDTH=0.02
+  LOGWEIGHTS=weights
+  LABEL=hist
+... HISTOGRAM
+
+fes: CONVERT_TO_FES GRID=hist TEMP=0.5
+
+DUMPGRID GRID=fes FILE=fes FMT=%24.16e
