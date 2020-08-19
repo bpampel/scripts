@@ -1,3 +1,25 @@
-# scheme is from color brewer http://colorbrewer2.org/?type=qualitative&scheme=Set1&n=9
-colors = "#e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628 #f781bf #999999"
-set for [i=1:words(colors)] linetype i lw 3 lc rgb word(colors, i)
+# scheme is adapted from color brewer http://colorbrewer2.org/?type=diverging&scheme=Spectral
+array colors[10]
+
+colors[4]="#d7191c #fdae61 #abdda4 #2b83ba" # 4 different colors
+colors[5]="#d7191c #fdae61 #abdda4 #2b83ba #bf8ac7" # 5 different colors (not screen friendly)
+colors[8]="#d7191c #fdae61 #abdda4 #2b83ba #85d7191c #80fdae61 #80abdda4 #902b83ba" # 4 colors with transparent versions
+colors[10]="#d7191c #fdae61 #abdda4 #2b83ba #bf8ac7 #85d7191c #80fdae61 #80abdda4 #902b83ba #80bf8ac7" # 5 colors with transparency
+
+num=@ARG1 # wanted color scheme
+set for [i=1:words(colors[num])] linetype i lw 3 lc rgb word(colors[num], i)
+
+set linetype 99 lw 6 lc black # thick black line for e.g. references
+
+
+# palette for 2d plots (reversed 5 colors with added darker blue)
+#set palette defined ( 0 "#15415c", 0.2 "#2b83ba", 0.4 "#abdda4", 0.6 "#ffffbf", 0.8 "#fdae61", 1 "#d7191c" )
+set palette defined ( 0 "#0d0d33", 0.1 "#1d597e", 0.2 "#2b83ba", 0.4 "#54c4a2", 0.6 "#ffdd25", 0.8 "#fdae61", 1 "#d7191c" )
+
+
+# custom dashtypes
+set dt 1 (13,11)
+set dt 2 (3.5,7,13,7)
+set dt 3 (3.5,7,3.5,7,13,7)
+set dt 4 (3.5,7,3.5,7,3.5,7,13,7)
+set dt 5 (3.5,6)

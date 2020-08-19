@@ -1,6 +1,9 @@
-set terminal pdfcairo color solid size 17.2 cm, 12.9 cm font ",18"
+set terminal pdfcairo enhanced color solid size 10 cm, 6 cm font "Bitstream Vera Sans,10"
+set lmargin at screen 0.15
+set bmargin at screen 0.17
+set rmargin at screen 0.97
+set tmargin at screen 0.95
 set border lw 1.5
+set encoding utf8
 
-load "~/scripts/gnuplot/style/colors.gpi"
-
-set key sample 1. top right spacing
+set key sample 2. top right spacing 1

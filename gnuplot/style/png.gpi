@@ -1,1 +1,10 @@
-set terminal pngcairo size 1000,700 enhanced font 'Verdana,18'
+set terminal pngcairo enhanced color solid size 800, 400 font "Bitstream Vera Sans,16"
+set lmargin at screen 0.15
+set bmargin at screen 0.17
+set rmargin at screen 0.97
+set tmargin at screen 0.95
+set border lw 1.5
+set encoding utf8
+
+set key sample 2. top right spacing 1
+
