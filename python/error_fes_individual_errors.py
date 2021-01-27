@@ -52,7 +52,7 @@ def parse_args():
     return args
 
 
-def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, metric='rsmd'):
+def calculate_error(filepath, dim, shift_region, error_region, ref, metric='rsmd'):
     """ Calculate error of FES wrt reference
 
     This shifts the read in FES by the average in the given region and then calculates the
@@ -65,7 +65,6 @@ def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, me
     shift_region  : numpy array with booleans for the regions to consider for aligning data
     error_region  : numpy array with booleans for the regions to consider for error calculation
     ref           : numpy array holding the reference values
-    refshift      : average value of ref in shift region
     metric        : used metric for averaging errors. Accepts either 'absolute' or 'rms'
 
     Returns
@@ -73,13 +72,18 @@ def calculate_error(filepath, dim, shift_region, error_region, ref, refshift, me
     error         : float with the average error value in error_region
     """
     fes = np.transpose(np.genfromtxt(filepath))[dim]  # throw away colvar
-    fes = fes - np.average(np.extract(shift_region, fes)) + refshift
+    # exclude areas with inf in fes
+    valid_fes_region = fes < np.inf
+    valid_shift_region = np.bitwise_and(shift_region, valid_fes_region)
+    valid_error_region = np.bitwise_and(error_region, valid_fes_region)
+    refshift = np.average(ref[valid_shift_region])
+    fes = fes - np.average(fes[valid_shift_region]) + refshift
     if metric == 'absolute':
         error = np.abs(fes - ref)
-        return np.average(np.extract(error_region, error))
+        return np.average(error[valid_error_region])
     elif metric == 'rmsd':
         error = (fes - ref)**2
-        return np.sqrt(np.average(np.extract(error_region, error)))
+        return np.sqrt(np.average(error[valid_error_region]))
     else:
         raise ValueError("Metric must be 'absolute' or 'rmsd'")
 
@@ -114,17 +118,16 @@ def main():
         if args.cv_range[0] < colvar[0] or args.cv_range[1] > colvar[-1]:
             raise ValueError("Specified CV range is not contained in reference range [{}, {}]"
                              .format(colvar[0], colvar[-1]))
-        cv_region = np.array([colvar >= args.cv_range[0]]) & np.array([colvar <= args.cv_range[1]])
-    shift_region = np.array([ref < shift_threshold]) & cv_region
-    error_region = np.array([ref < error_threshold]) & cv_region
-    refshift = np.average(np.extract(shift_region, ref))
+        cv_region = np.bitwise_and(colvar >= args.cv_range[0], colvar <= args.cv_range[1])
+    shift_region = np.bitwise_and(ref < shift_threshold, cv_region)
+    error_region = np.bitwise_and(ref < error_threshold, cv_region)
 
     # everything set up, now calculate errors for all files
     filepaths = [os.path.join(d, f) for d in folders for f in files]
     pool = Pool(processes=args.numprocs)
     errors = pool.map(partial(calculate_error, dim=dim, shift_region=shift_region,
-                              error_region=error_region, ref=ref, refshift=refshift,
-                              metric=args.error_metric), filepaths)
+                              error_region=error_region, ref=ref, metric=args.error_metric),
+                      filepaths)
     errors = np.array(errors).reshape(len(folders),len(files))  # put in matrix form
 
     # write error for each folder to file

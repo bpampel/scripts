@@ -80,7 +80,11 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     if ind_shift:
         for j, filename in enumerate(filenames):
             fes = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
-            data[j] = fes - np.average(np.extract(shift_region, fes)) + refshift
+            # exclude areas with inf in fes
+            valid_fes_region = fes < np.inf
+            valid_shift_region = np.bitwise_and(shift_region, valid_fes_region)
+            refshift = np.average(ref[valid_shift_region])
+            data[j] = fes - np.average(fes[valid_shift_region]) + refshift
     else:
         for j, filename in enumerate(filenames):
             data[j] = np.transpose(np.genfromtxt(filename))[dim] # throw away colvar
@@ -91,8 +95,10 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     avgstddev = np.average(np.extract(error_region, stddev))
 
     if not ind_shift:
-        avgshift = np.average(np.extract(shift_region, avgdata))
-        avgdata = avgdata - avgshift + refshift
+        valid_avg_region = avg < np.inf
+        valid_shift_region = np.bitwise_and(shift_region, valid_avg_region)
+        refshift = np.average(ref[valid_shift_region])
+        avgdata = avgdata - np.average(avgdata[valid_shift_region]) + refshift
 
     # calculate bias
     bias = np.absolute(avgdata - ref)
@@ -185,9 +191,9 @@ if __name__ == '__main__':
         if args.cv_range[0] < colvar[0] or args.cv_range[1] > colvar[-1]:
             raise ValueError("Specified CV range is not contained in reference range [{}, {}]"
                              .format(colvar[0], colvar[-1]))
-        cv_region = np.array([colvar >= args.cv_range[0]]) & np.array([colvar <= args.cv_range[1]])
-    shift_region = np.array([ref < shift_threshold]) & cv_region
-    error_region = np.array([ref < error_threshold]) & cv_region
+        cv_region = np.bitwise_and(colvar >= args.cv_range[0], colvar <= args.cv_range[1])
+    shift_region = np.bitwise_and(ref < shift_threshold, cv_region)
+    error_region = np.bitwise_and(ref < error_threshold, cv_region)
     refshift = np.average(np.extract(shift_region, ref))
 
     avgdir = os.path.join(args.path, args.avgdir)
