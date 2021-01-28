@@ -111,8 +111,8 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     # copy header from one infile and add fields
     fileheader = plmdheader.PlumedHeader()
     fileheader.parse_file(filenames[0])
-    fileheader[0] += ' bias stddev error'
-    fileheader.add_line('SET nruns_avg {}'.format(len(filenames)))
+    fileheader.fields += ["bias", "stddev", "error"]
+    fileheader.set_constant("nruns_avg", len(filenames))
 
     # parse number format from FES file
     fmt_str = nfmt.get_string_from_file(filenames[0], dim)
@@ -126,9 +126,7 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
                    comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
     if dim == 2:
         # find out number of bins per direction from header
-        nbins = []
-        for line in fileheader.search_lines('nbins'):
-            nbins.append(int(line[1].split(' ')[-1]))
+        nbins = [val for key, val in fileheader.constants.items() if 'nbins' in key]
         write_sliced_to_file(outdata, nbins, outfile, fileheader, fmt.get())
 
     return [avgbias, avgstddev, avgerror]
@@ -212,11 +210,11 @@ if __name__ == '__main__':
     errorfile = os.path.join(args.path, args.errorfile)
     hlpmisc.backup_if_exists(errorfile)
     errordata = np.column_stack((times, avgvalues))
-    errorheader = plmdheader.PlumedHeader()
-    errorheader.add_line("FIELDS time bias stddev total_error")
-    errorheader.add_line("SET kT {}".format(args.kT))
-    errorheader.add_line("SET shift_threshold {}".format(args.shift_threshold))
-    errorheader.add_line("SET error_threshold {}".format(args.error_threshold))
+    fields = ["time", "bias", "stddev", "total_error"]
+    errorheader = plmdheader.PlumedHeader(fields)
+    errorheader.set_constant("kT", args.kT)
+    errorheader.set_constant("shift_threshold", args.shift_threshold)
+    errorheader.set_constant("error_threshold", args.error_threshold)
     fmt = [fmt_times] + 3*[fmt_error]
     np.savetxt(errorfile, np.asmatrix(errordata), header=str(errorheader),
                comments='', fmt=fmt, delimiter=' ', newline='\n')

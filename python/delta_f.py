@@ -174,14 +174,13 @@ def main():
         delta_F = pool.map(partial(calculate_delta_F, kT=args.kT, masks=masks, col=args.col), allfilenames)
         delta_F = np.array(delta_F).reshape((len(folders), len(files), num_states-1))
 
-        header = plmdheader.PlumedHeader()
-        fields = ['FIELDS', 'time']
+        fields = ['time']
         if num_states == 2:
             fields.append('deltaF')
         else:
             fields += ['deltaF_1_' + str(i) for i in range(2,num_states+1)]
-        header.add_line(' '.join(fields))
-        header.add_line('SET kT {}'.format(args.kT))
+        header = plmdheader.PlumedHeader(fields)
+        header.set_constant('kT', args.kT)
         fmt = [fmt_times] + [fmt_error]*(num_states-1)
 
         for i, f in enumerate(outfilenames):
@@ -197,13 +196,13 @@ def main():
             avg_delta_F = np.average(delta_F, axis=0)
             stddev = np.std(delta_F, axis=0, ddof=1)
             outdata = np.c_[times, avg_delta_F, stddev]
-            fields = ['FIELDS', 'time']
+            fields = ['time']
             if num_states == 2:
                 fields += ['deltaF.avg', 'deltaF.stddev']
             else:
-                fieldsline += ['deltaF_1_' + str(i) + '.avg' for i in range(2,num_states+1)]
-                fieldsline += ['deltaF_1_' + str(i) + '.stddev' for i in range(2,num_states+1)]
-            header[0] = ' '.join(fields)
+                fields += ['deltaF_1_' + str(i) + '.avg' for i in range(2,num_states+1)]
+                fields += ['deltaF_1_' + str(i) + '.stddev' for i in range(2,num_states+1)]
+            header.fields = fields
             fmt += [fmt_error]
             hlpmisc.backup_if_exists(avgfilename)
             np.savetxt(avgfilename, outdata, header=str(header),

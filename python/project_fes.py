@@ -39,12 +39,13 @@ def manipulate_header(header, dim):
     Change the original header of the input file
     Remove everything from the projected out dimension
     """
-    fieldslinenum, fields = header.search_lines("FIELDS")[0]
-    proj_variable = fields.split()[dim+1]
-    proj_value = fields.split()[4]
-    header[fieldslinenum] = "#! FIELDS {} projection.{}".format(proj_variable, proj_value)
-    removed_value = fields.split()[4-dim]
-    header.del_lines([i for i, _ in header.search_lines(removed_value)])
+    proj_variable = header.fields[dim]
+    removed_variable = header.fields[3-dim]  # assuming 2d FES
+    value_field = header.fields[3]
+    header.fields = ["projection." + proj_variable, value_field]
+    for const in header.const:  # remove constants related to projected out variable
+        if removed_variable in const:
+            del header.const[const]
 
 
 if __name__ == '__main__':
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 
     fes = np.genfromtxt(args.filename)
     fmt = nfmt.NumberFmt(nfmt.get_string_from_file(args.filename, 2))
-    header = plmdheader.PlumedHeader()
+    header = plmdheader.create_from_file(args.filename)
     header.parse_file(args.filename)
     manipulate_header(header, args.dim)
 

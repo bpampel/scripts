@@ -67,9 +67,8 @@ def avg_fes(filenames, avgdir, colvar, shift_region, refshift):
     avgdata = np.average(data, axis=0)
 
     # copy header from one infile and add fields
-    fileheader = plmdheader.PlumedHeader()
-    fileheader.parse_file(filenames[0])
-    fileheader.add_line('SET nruns_avg {}'.format(len(filenames)))
+    fileheader = plmdheader.create_from_file(filenames[0])
+    fileheader.set_constant("nruns_avg", len(filenames))
 
     # parse number format from FES file
     fmt_str = nfmt.get_string_from_file(filenames[0], dim)
@@ -82,10 +81,8 @@ def avg_fes(filenames, avgdir, colvar, shift_region, refshift):
         np.savetxt(outfile, np.asmatrix(outdata), header=str(fileheader),
                    comments='', fmt=fmt.get(), delimiter=' ', newline='\n')
     if dim == 2:
-        # find out number of bins per direction from header
-        nbins = []
-        for line in fileheader.search_lines('nbins'):
-            nbins.append(int(line[1].split(' ')[-1]))
+        # find out number of bins per direction from header constants
+        nbins = [val for key, val in fileheader.constants.items() if 'nbins' in key]
         write_sliced_to_file(outdata, nbins, outfile, fileheader, fmt.get())
 
 

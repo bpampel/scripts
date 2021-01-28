@@ -131,12 +131,12 @@ def main():
     errors = np.array(errors).reshape(len(folders),len(files))  # put in matrix form
 
     # write error for each folder to file
-    fileheader = plmdheader.PlumedHeader()
-    fileheader.add_line("FIELDS time error")
-    fileheader.add_line("SET kT {}".format(args.kT))
-    fileheader.add_line("SET shift_threshold {}".format(args.shift_threshold))
-    fileheader.add_line("SET error_threshold {}".format(args.error_threshold))
-    fileheader.add_line("SET error_metric {}".format(args.error_metric))
+    fields = ["time", "error"]
+    fileheader = plmdheader.PlumedHeader(fields)
+    fileheader.set_constant("kT", args.kT)
+    fileheader.set_constant("shift_threshold", args.shift_threshold)
+    fileheader.set_constant("error_threshold", args.error_threshold)
+    fileheader.set_constant("error_metric", args.error_metric)
     fmt = [fmt_times] + [fmt_error]
     for i, folder in enumerate(folders):
         errorfile = os.path.join(folder, args.outfile)
@@ -150,8 +150,8 @@ def main():
     # write to file
     avgfile = os.path.join(args.path, args.outfile)  # in base dir
     hlpmisc.backup_if_exists(avgfile)
-    fileheader[0] = "FIELDS time avg_error stddev"
-    fileheader.add_line('SET nruns_avg {}'.format(len(folders)))
+    fileheader.fields = ["time", "avg_error", "stddev"]
+    fileheader.set_constant('nruns_avg', len(folders))
     fmt.append(fmt_error)
     np.savetxt(avgfile, np.vstack((times, avg_error, stddev)).T, header=str(fileheader),
                comments='', fmt=fmt, delimiter=' ', newline='\n')
