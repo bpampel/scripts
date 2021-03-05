@@ -21,6 +21,7 @@ import numpy as np
 from bdld.histogram import Histogram
 from bdld.potential import polynomial
 from bdld.actions.birth_death import dens_kernel_convolution
+from helpers.plumed_header import PlumedHeader
 
 
 def parse_cliargs():
@@ -77,17 +78,24 @@ def parse_cliargs():
         type=float,
         help="KDE bandwidth when using KDE for density estimate",
     )
-    parser.add_argument("-o", "--outfile", help="Name of the output file")
     parser.add_argument(
         "-m",
         "--method",
         help="Method for density estimation. 'histogram', 'kde' or 'ash'",
         required=True,
     )
+    parser.add_argument(
+        "-o",
+        "--outfile",
+        help="Name of the output file, defaults to 'cov_rho_pi'",
+        default="cov_rho_pi",
+    )
     args = parser.parse_args()
 
     args.bd_bw = match_dimensions(args.bd_bw, args.dim)
-    args.bd_bw = np.array(args.bd_bw)  # cast to numpy array because some functions expect it
+    args.bd_bw = np.array(
+        args.bd_bw
+    )  # cast to numpy array because some functions expect it
 
     if args.method == "histogram":
         if not args.n_bins:
@@ -133,16 +141,28 @@ def main():
     pot = polynomial.PolynomialPotential(coeffs, ranges)  # for reference
 
     # main loop: over the different snapshots at the different times
-    # for dist in particle_dists:
-    cov = calc_cov(
-        particle_dists[5],
-        pot,
-        args.method,
-        args.bd_bw,
-        args.kt,
-        args.n_bins,
-        args.kde_bw,
-    )
+    cov = []
+    for dist in particle_dists:
+        cov.append(
+            calc_cov(
+                dist,
+                pot,
+                args.method,
+                args.bd_bw,
+                args.kt,
+                args.n_bins,
+                args.kde_bw,
+            )
+        )
+
+    # set up header for file
+    fields = ["time", "cov"]
+    constants = {"method": f"{args.method}", "n_bins": f"{args.n_bins}"}
+    if args.method == "kde":
+        constants["kde_bw"] = f"{args.kde_bw}"
+    header = PlumedHeader(fields, constants)
+
+    np.savetxt(args.outfile, np.c_[times, cov], fmt="%14.9f", header=str(header), comments='')
     print(cov)
 
 
