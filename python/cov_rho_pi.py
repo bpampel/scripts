@@ -141,18 +141,17 @@ def main():
     pot = polynomial.PolynomialPotential(coeffs, ranges)  # for reference
 
     # main loop: over the different snapshots at the different times
-    cov = []
-    for dist in particle_dists:
-        cov.append(
-            calc_cov(
-                dist,
-                pot,
-                args.method,
-                args.bd_bw,
-                args.kt,
-                args.n_bins,
-                args.kde_bw,
-            )
+    values = np.empty((len(particle_dists), 3))  # time, cov, kl_div
+    values[:, 0] = times
+    for t, dist in enumerate(particle_dists):  # iterate over time
+        values[t, 1:] = calc_cov(
+            dist,
+            pot,
+            args.method,
+            args.bd_bw,
+            args.kt,
+            args.n_bins,
+            args.kde_bw,
         )
 
     # set up header for file
@@ -162,12 +161,32 @@ def main():
         constants["kde_bw"] = f"{args.kde_bw}"
     header = PlumedHeader(fields, constants)
 
-    np.savetxt(args.outfile, np.c_[times, cov], fmt="%14.9f", header=str(header), comments='')
-    print(cov)
+    np.savetxt(
+        args.outfile, values, fmt="%14.9f", header=str(header), comments=""
+    )
 
 
 def calc_cov(dist, pot, method, bd_bw, kt, n_bins=None, kde_bw_method=None):
-    """Calculate the covariance value from a snapshot"""
+    """Calculate the covariance value from a snapshot
+
+    Also returns the "KL divergence" between rho and pi for comparison
+
+    :param dist: numpy array holding the particle distribution
+    :param pot: potential used to calculate pi
+    :param bd_bw: bandwidth of the birth-death algorithm during the simulation
+    :param kt:  thermal energy
+    :param n_bins: List with number of bins for histogram per dimension
+                   For KDE this specifies the number of points where the densities
+                   are evaluated
+    :param kde_bw_method: if set this will use Kernel Density Estimation
+                          instead of histogramming. The value is passed to
+                          scipy.stats.gaussian_kde (see syntax there)
+
+    :return cov: Full covariance value
+    :return kl_div: KL divergence term
+
+
+    """
     if method in ["histogram", "kde"]:
         rho, pi = calc_densities_histo_kde(dist, pot, n_bins, kt, kde_bw_method)
     else:
@@ -179,8 +198,9 @@ def calc_cov(dist, pot, method, bd_bw, kt, n_bins=None, kde_bw_method=None):
     a = np.log(rho / pi)
     b = np.log(rho_conv / pi_conv)
 
-    cov = integrate(a * b, rho.data) - integrate(a, rho.data) * integrate(b, rho.data)
-    return cov
+    kl_div = integrate(a, rho.data)
+    cov = integrate(a * b, rho.data) - kl_div * integrate(b, rho.data)
+    return cov, kl_div
 
 
 def integrate(grid, weights):
