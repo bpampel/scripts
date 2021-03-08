@@ -155,7 +155,7 @@ def main():
         )
 
     # set up header for file
-    fields = ["time", "cov"]
+    fields = ["time", "cov", "kl_div"]
     constants = {"method": f"{args.method}", "n_bins": f"{args.n_bins}"}
     if args.method == "kde":
         constants["kde_bw"] = f"{args.kde_bw}"
