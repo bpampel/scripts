@@ -18,6 +18,7 @@ steps to calculate:
 import argparse
 import numpy as np
 
+from bdld import grid
 from bdld.histogram import Histogram
 from bdld.potential import polynomial
 from bdld.actions.birth_death import dens_kernel_convolution
@@ -166,13 +167,14 @@ def main():
     )
 
 
-def calc_cov(dist, pot, method, bd_bw, kt, n_bins=None, kde_bw_method=None):
+def calc_cov(dist, pot, density_method, bd_bw, kt, n_bins=None, kde_bw_method=None):
     """Calculate the covariance value from a snapshot
 
     Also returns the "KL divergence" between rho and pi for comparison
 
     :param dist: numpy array holding the particle distribution
     :param pot: potential used to calculate pi
+    :param density_method: method to evaluate density. One of "histogram", "kde", "ash".
     :param bd_bw: bandwidth of the birth-death algorithm during the simulation
     :param kt:  thermal energy
     :param n_bins: List with number of bins for histogram per dimension
@@ -187,10 +189,7 @@ def calc_cov(dist, pot, method, bd_bw, kt, n_bins=None, kde_bw_method=None):
 
 
     """
-    if method in ["histogram", "kde"]:
-        rho, pi = calc_densities_histo_kde(dist, pot, n_bins, kt, kde_bw_method)
-    else:
-        raise ValueError(f"Specified method {method} not implemented")
+    rho, pi = calc_density(dist, pot, density_method, n_bins, kt, kde_bw_method)
 
     rho_conv = dens_kernel_convolution(rho, bd_bw, "same")
     pi_conv = dens_kernel_convolution(pi, bd_bw, "same")
@@ -250,38 +249,44 @@ def read_trajectories(filenames, dim, stride=1):
     return particle_dists, times
 
 
-def calc_densities_histo_kde(pos, pot, n_bins, kt, kde_bw_method):
+def calc_density(pos, pot, method, n_bins, kt, kde_bw_method=None):
     """Calculate the density (rho) and the corresponding eq. density pi
 
     this uses either histogramming or kde if
 
     :param pos: List or numpy array of particle positions
     :param pot: potential used to calculate pi
+    :param method: one of "histogram", "kde", "ash"
     :param kt:  thermal energy
     :param n_bins: List with number of bins for histogram per dimension
                    For KDE this specifies the number of points where the densities
                    are evaluated
-    :param kde_bw_method: if set this will use Kernel Density Estimation
-                          instead of histogramming. The value is passed to
-                          scipy.stats.gaussian_kde (see syntax there)
+    :param kde_bw_method: Bandwidth for kde or method to calculate it.
+                          The value is passed to scipy.stats.gaussian_kde.
 
     :return rho: Grid holding the estimated density
     :return pi: Grid with the same points holding the equilibrium density
     """
-    histo = Histogram(n_bins, pot.ranges)
-    # rho is the estimated density from the particles
-    rho = histo.copy_empty()  # copy points from histo to be consistent between methods
+    if method in ["histogram", "kde"]:  # works similar
+        histo = Histogram(n_bins, pot.ranges)
+        # rho is the estimated density from the particles
+        rho = histo.copy_empty()  # copy points from histo to be consistent between methods
+        if method == "histogram":
+            histo.add(pos)
+            rho.data = histo.data / (np.sum(histo.data) * np.prod(rho.stepsizes))
+        elif method == "kde":
+            from scipy.stats import gaussian_kde
+            kde = gaussian_kde(pos.T, kde_bw_method)
+            rho.set_from_func(kde.evaluate)
+    elif method == "ash":  # can't use the same grid with the ash implementation
+        from ash.ash import ash
+        ash_obj = ash(pos.flatten(), n_bins[0])
+        rho = grid.from_npoints([(ash_obj.MIN, ash_obj.MAX)], len(ash_obj.ash_mesh))
+        rho.data = ash_obj.ash_den
+    else:
+        raise ValueError(f"Specified method {method} not implemented")
 
-    if not kde_bw_method:  # use histogramming
-        histo.add(pos)
-        rho.data = histo.data / (np.sum(histo.data) * np.prod(rho.stepsizes))
-    else:  # use kde
-        from scipy.stats import gaussian_kde
-
-        kde = gaussian_kde(pos.T, kde_bw_method)
-        rho.set_from_func(kde.evaluate)
-
-    pot_grid = histo.copy_empty()
+    pot_grid = rho.copy_empty()
     pot_grid.set_from_func(pot.energy)
 
     # pi is the equilibrium distribution from the potential
