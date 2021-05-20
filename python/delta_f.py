@@ -151,7 +151,9 @@ def main():
                          .format(*[len(m) for m in masks]))
 
     if args.fd == 'f':
-        print(fmt_error % calculate_delta_F(args.path, args.kT, masks, args.col))
+        delta_f = calculate_delta_F(args.path, args.kT, masks, args.col)
+        for val in delta_f:
+            print(f"{val}")
 
     elif args.fd == 'd':
         folders = hlpmisc.get_subfolders(args.path)
