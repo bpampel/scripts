@@ -25,7 +25,7 @@ def parse_args():
     return args
 
 
-def calc_mutual_information(x, y, bins, ra):
+def calc_mutual_information(x, y, bins, ra, ix=None, iy=None):
     """Calculate mutual information between vectors x and y
 
     Arguments
@@ -33,6 +33,8 @@ def calc_mutual_information(x, y, bins, ra):
     x, y : vectors with data points
     bins : bins for histogramming the vectors
     ra   : range of the histogram
+    ix   : identifier of x when printing out
+    iy   : identifier of y when printing out
 
     Returns
     -------
@@ -47,7 +49,8 @@ def calc_mutual_information(x, y, bins, ra):
     h_xy = shannon_entropy(c_xy)
 
     mutual_information = h_x + h_y - h_xy
-    return mutual_information
+    print(f"{ix}, {iy}: {h_x} + {h_y} - {h_xy} = {mutual_information}")
+    return mutual_information, h_xy
 
 
 def shannon_entropy(c):
@@ -71,11 +74,20 @@ def main():
 
     n = len(data)
     mut_info = np.zeros((n,n))  # need only half the matrix but create full one
+    shared_entropy = np.zeros((n,n))
     # use i1 and i2 as indices to know which elements are currently processed
+    print(f"x, y: entr_x + entr_y - entr_xy = mutual_information")
     for i1, i2 in itertools.combinations(range(len(data)), 2):
-        mut_info[i1, i2] = calc_mutual_information(data[i1], data[i2], args.bins, args.hist_range)
+        mut_info[i1, i2], shared_entropy[i1,i2] = calc_mutual_information(data[i1], data[i2], args.bins, args.hist_range, i1, i2)
 
+    norm_mut_info = 1 - (mut_info / shared_entropy)
+
+    print("\nMutual information:")
     print(mut_info)
+
+
+    print("\nNormalized mutual information:")
+    print(norm_mut_info)
 
 if __name__ == '__main__':
     main()
