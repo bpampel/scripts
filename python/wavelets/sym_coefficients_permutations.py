@@ -11,6 +11,8 @@ import numpy as np
 from scipy.special import comb
 from itertools import combinations
 
+print("This prints out all possible choices of coefficients for Daubechies type wavelets (with duplicates)")
+print("Press return to receive the next permutation: the numbers in [ ] are the roots inside the unit circle for the current choice")
 
 p=8
 # find roots of the defining polynomial B(y)

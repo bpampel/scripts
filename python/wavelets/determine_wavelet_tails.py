@@ -15,7 +15,7 @@ def significant_range(array, threshold):
 
 if __name__ == '__main__':
     for order in range(4,21):
-        x, scaling_func, wavelet = wvlt.db_wavelet(order, 6)
+        x, scaling_func, wavelet = wvlt.wavelet(order, 6)
         print(order,end=' ')
         for func in [scaling_func[0], wavelet[0]]:
             threshold = 0.01*np.max(func)

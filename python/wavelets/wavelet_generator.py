@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 '''
 Calculate the scaling function and its derivative for Daubechies Wavelets
+Note: this does not result in the canonical choice of the Symlets in most cases!
+The "linphase" of these has to be measured differently.
 '''
 
 import argparse
