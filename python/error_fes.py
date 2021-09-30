@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument("--avgdir",
                         help='Name of the directory for the average file. Default is "avg"',
                         default="avg")
-    parser.add_argument("--errorfile",
+    parser.add_argument("-o", "--outfile",
                         help='Name of the file for the error values. Default is "error.txt"',
                         default="error.txt")
     parser.add_argument("-st", "--shift-threshold", type=float, dest='shift_threshold',
@@ -95,7 +95,7 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     avgstddev = np.average(np.extract(error_region, stddev))
 
     if not ind_shift:
-        valid_avg_region = avg < np.inf
+        valid_avg_region = avgdata < np.inf
         valid_shift_region = np.bitwise_and(shift_region, valid_avg_region)
         refshift = np.average(ref[valid_shift_region])
         avgdata = avgdata - np.average(avgdata[valid_shift_region]) + refshift
@@ -111,8 +111,10 @@ def calculate_error(filenames, avgdir, colvar, shift_region, error_region, ref, 
     # copy header from one infile and add fields
     fileheader = plmdheader.PlumedHeader()
     fileheader.parse_file(filenames[0])
-    fileheader.fields += ["bias", "stddev", "error"]
+    fileheader.fields += ["bias", "stddev", "total_error"]
     fileheader.set_constant("nruns_avg", len(filenames))
+    fileheader.set_constant("shift_threshold", shift_threshold)
+    fileheader.set_constant("error_threshold", error_threshold)
 
     # parse number format from FES file
     fmt_str = nfmt.get_string_from_file(filenames[0], dim)
@@ -207,7 +209,7 @@ if __name__ == '__main__':
                          filenames)
 
     # write averaged values to file
-    errorfile = os.path.join(args.path, args.errorfile)
+    errorfile = os.path.join(args.path, args.outfile)
     hlpmisc.backup_if_exists(errorfile)
     errordata = np.column_stack((times, avgvalues))
     fields = ["time", "bias", "stddev", "total_error"]
