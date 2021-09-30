@@ -41,10 +41,10 @@ def manipulate_header(header, dim):
     Change the original header of the input file
     Remove everything from the projected out dimension
     """
-    proj_variable = header.fields[dim]
+    proj_variable = header.fields[dim-1]
     removed_variable = header.fields[2-dim]  # assuming 2d FES
     value_field = header.fields[2]
-    header.fields = ["projection." + proj_variable, value_field]
+    header.fields = [proj_variable, "proj." + value_field]
     remove_const = [const for const in header.constants if removed_variable in const]
     for const in remove_const: # remove constants related to projected out variable
         del header.constants[const]
