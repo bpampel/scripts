@@ -82,11 +82,11 @@ def main():
         sys.exit("Reference file could not be parsed correctly!")
     dim = ref.shape[0] - 1
     colvar = ref[0:dim]
-    ref = kl_div.fes_to_prob(ref[dim], args.kt)
+    ref = fes_to_prob(ref[dim], args.kt)
 
     # calculate all
     fes_files = args.path
-    kl_values = [kl_div.kl_div_to_ref(f, ref, args.kt, dim) for f in fes_files]
+    kl_values = [kl_div_to_ref(f, ref, args.kt, dim) for f in fes_files]
 
     # output: simply print to screen
     print('kl_div   filename')
