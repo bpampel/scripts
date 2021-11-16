@@ -9,6 +9,7 @@ Combination of both gives the total error.
 import argparse
 from functools import partial
 import os
+import sys
 from multiprocessing import Pool
 import numpy as np
 from scipy.spatial.distance import pdist
@@ -21,6 +22,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('path',
                         help="Path to the folder to be evaluated")
+    parser.add_argument('-s','--subfolders', nargs='+',
+                        help="Manually specify the subfolders to evaluate")
     parser.add_argument('-r', '--ref',
                         help="Path to the reference FES file",
                         required=True)
@@ -103,15 +106,23 @@ def main():
         ref = np.genfromtxt(args.ref).T
     except IOError:
         print("Reference file not found!")
+        sys.exit(1)
     dim = ref.shape[0] - 1
     colvar = ref[0:dim]
     ref = ref[dim]
 
     # get folders and files
-    folders = hlpmisc.get_subfolders(args.path)
-    if len(folders) == 0:
-        raise ValueError("No subfolders found at specified path.")
+    folders = args.subfolders
+    if not folders:
+        folders = hlpmisc.get_subfolders(args.path)
+        if not folders:  # is empty
+            raise ValueError("No subfolders found at specified path.")
+    for f in folders:
+        if not os.path.isdir(f):
+            raise ValueError("Could not find specified subfolder {}.".format(f))
     files, times = hlpmisc.get_fesfiles(folders[0])  # assumes all folders have the same files
+    if not files:
+        raise ValueError("No FES files found in first subdir. Are you sure the path is correct?")
 
     # determine regions of interest and create arrays of booleans
     if args.cv_range and dim==1: # missing implementation for higher dimensions
@@ -124,10 +135,11 @@ def main():
 
     # everything set up, now calculate errors for all files
     filepaths = [os.path.join(d, f) for d in folders for f in files]
-    pool = Pool(processes=args.numprocs)
-    errors = pool.map(partial(calculate_error, dim=dim, shift_region=shift_region,
-                              error_region=error_region, ref=ref, metric=args.error_metric),
-                      filepaths)
+    #pool = Pool(processes=args.numprocs)
+    errors = [calculate_error(f, dim, shift_region, error_region, ref, args.error_metric) for f in filepaths]
+    #errors = pool.map(partial(calculate_error, dim=dim, shift_region=shift_region,
+                              # error_region=error_region, ref=ref, metric=args.error_metric),
+                      # filepaths)
     errors = np.array(errors).reshape(len(folders),len(files))  # put in matrix form
 
     # write error for each folder to file
