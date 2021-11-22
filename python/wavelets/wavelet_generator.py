@@ -28,12 +28,13 @@ def parse_args():
                               Output is by default to screen but can be to file if the -f flag is given")
     parser.add_argument('-norm', '--coeffsnorm', type=float, default=np.sqrt(2),
                         help="Normalization of the filter coefficients to be printed.\n\
-                              Will be ignored if the -c flag is not specified.")
+                              Will be ignored if the -c flag is not specified.\n\
+                              Defaults to sqrt(2).")
     args = parser.parse_args()
     return args
 
 
-def filter_coeffs(p, norm=1, linphase=False):
+def filter_coeffs(p, norm=np.sqrt(2), linphase=False):
     ''' Calculate the filter coefficients for Daubechies Wavelets
 
     c.f. Strang, Nguyen - "Wavelets and Filters" ch. 5.5
@@ -72,7 +73,7 @@ def filter_coeffs(p, norm=1, linphase=False):
     z += [-1]*p
     # put together the polynomial C(z) and normalize the coefficients
     C_z = np.real(poly.polyfromroots(z)) # imaginary part may be non-zero because of rounding errors
-    C_z *= norm * np.sqrt(2) / sum(C_z)
+    C_z *= norm / sum(C_z)
     return C_z[::-1]
 
 
@@ -125,7 +126,7 @@ def wavelet(p, d=6, linphase=False):
     :return: (x, phi, psi) where phi is the scaling and psi the wavelet function
     '''
     n = 2*p - 1
-    h = filter_coeffs(p, 1/np.sqrt(2), linphase)
+    h = filter_coeffs(p, 1, linphase)
     g = highpass_from_lowpass(h)
 
     H = m_matrices(h)
