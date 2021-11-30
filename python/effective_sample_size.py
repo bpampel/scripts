@@ -22,13 +22,13 @@ def eff_sample_size_from_weights(weights):
 
     Formula from eq (13) of Invernizzi, Piaggi, Parrinello, Phys Rev X (2020)
     """
-    return np.sum(weights)**2 / np.sum(weights**2)
+    return np.sum(weights) ** 2 / np.sum(weights ** 2)
 
 
 def calc_normalized_weights(biasvals, kt):
     """Calculate normalized weights from bias values"""
-    biasmax=np.max(biasvals)
-    return np.exp((biasvals-biasmax)/kt)
+    biasmax = np.max(biasvals)
+    return np.exp((biasvals - biasmax) / kt)
 
 
 def calc_eff_sample_size(filepath, biascol, kt):
@@ -47,12 +47,12 @@ def calc_eff_sample_size(filepath, biascol, kt):
 def main():
     args = parse_args()
     sample_size = calc_eff_sample_size(
-                    args.path,
-                    args.biascol-1, # python cols start from 0
-                    args.thermalenergy,
-                    )
+        args.path,
+        args.biascol - 1,  # python cols start from 0
+        args.thermalenergy,
+    )
     print(sample_size)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
