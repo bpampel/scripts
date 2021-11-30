@@ -17,7 +17,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def calc_eff_sample_size(weights):
+def eff_sample_size_from_weights(weights):
     """Calculate the effective sample size
 
     Formula from eq (13) of Invernizzi, Piaggi, Parrinello, Phys Rev X (2020)
@@ -30,12 +30,28 @@ def calc_normalized_weights(biasvals, kt):
     biasmax=np.max(biasvals)
     return np.exp((biasvals-biasmax)/kt)
 
+
+def calc_eff_sample_size(filepath, biascol, kt):
+    """Calculate the effective sample size of a colvar file
+
+    param filepath: path to colvar file
+    param biascol: column of file containing the bias values
+    param kt: thermal energy of simulation
+    return: effective sample size
+    """
+    biasvals = np.genfromtxt(filepath)[:, biascol]
+    weights = calc_normalized_weights(biasvals, kt)
+    return eff_sample_size_from_weights(weights)
+
+
 def main():
     args = parse_args()
-    biasvals = np.genfromtxt(args.path)[:,args.biascol-1] # python cols start from 0
-    weights = calc_normalized_weights(biasvals, args.thermalenergy)
-    eff_sample_size = calc_eff_sample_size(weights)
-    print(eff_sample_size)
+    sample_size = calc_eff_sample_size(
+                    args.path,
+                    args.biascol-1, # python cols start from 0
+                    args.thermalenergy,
+                    )
+    print(sample_size)
 
 
 if __name__ == '__main__':
