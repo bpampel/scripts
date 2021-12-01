@@ -10,9 +10,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("path", nargs='+',
                         help="Path to the colvar file(s)")
-    parser.add_argument("-c", "--biascol", type=int,
+    parser.add_argument("-c", "--biascol", type=int, required=True,
                         help="Column of the file containing the bias values")
-    parser.add_argument("-t", "--thermalenergy", type=float,
+    parser.add_argument("-t", "--thermalenergy", type=float, required=True,
                         help="Thermal energy of the simulation (kT) in matching units")
     return parser.parse_args()
 
@@ -60,7 +60,8 @@ def main():
         args.biascol - 1,  # python cols start from 0
         args.thermalenergy,
     )
-    print(f"{sample_size}    {w_mean}    {w_stddev}")
+    print(f"eff_sample_size    w_mean       w_stddev")
+    print(f"{sample_size:10.5f}    {w_mean:10.5f}    {w_stddev:10.5f}")
 
 
 if __name__ == "__main__":
