@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """
-Calculates error of a FES calculation
-Averages pointwise over a set of FES and calculates the standart deviation.
-Compares the average values pointwise to a reference FES for the bias.
-Combination of both gives the total error.
+Calculates (rms) error of a series of FES estimates
+
+This can be used to calculate time series of the error for individual simulations,
+as well as the average and standard deviation over a set of independent simulations
+(with same folder structure)
+
+The FES estimates are aligned with the reference in a certain area.
+The error is calculated pointwise in the specified area and then the rmsd of the FES is calculated
+This can then also be averaged over multiple simulations.
 """
+
 
 import argparse
 from functools import partial
@@ -33,6 +39,8 @@ def parse_args():
     parser.add_argument("-o", "--outfile",
                         help='Name of the file for the error values. Default is "error.txt"',
                         default="error.txt")
+    parser.add_argument("--avgfile",
+                        help='Name of the file for the average error. Default is the same as -o"')
     parser.add_argument("-st", "--shift-threshold", type=float, dest='shift_threshold',
                         help="Threshold value of FES (in units of kT) for shifting area. Defaults to 4",
                         default="4.0")
@@ -160,7 +168,9 @@ def main():
     avg_error = np.average(errors, axis=0)
     stddev = np.std(errors, axis=0, ddof=1)
     # write to file
-    avgfile = os.path.join(args.path, args.outfile)  # in base dir
+    avgfile = args.avgfile
+    if not avgfile:  # use same name as for the others
+        avgfile = os.path.join(args.path, args.outfile)  # in base dir
     hlpmisc.backup_if_exists(avgfile)
     fileheader.fields = ["time", "avg_error", "stddev"]
     fileheader.set_constant('nruns_avg', len(folders))
