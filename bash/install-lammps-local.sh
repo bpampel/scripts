@@ -1,14 +1,10 @@
-# Install LAMMPS on Draco
-# Last changed by Benjamin Pampel on Apr 08 2019
-#
-# Notes:
-#  - this links lammps with a static plumed library which has to be generated first
-#
+# Install LAMMPS locally on pckr (very basic)
 
-LAMMPS_DIR="${PWD}/lammps"
-PLUMED2_INSTALL_DIR="${HOME}/code/plumed2/br-ves-localized-bfs/install" # could also be set by some enviromental variable
-PLUMED2_LINK_MODE="static"
-CORES=4
+STARTDIR=$(pwd)
+LAMMPS_DIR="/usr/data/pampel/lammps/lammps-24Mar2022/"
+PLUMED2_INSTALL_DIR="/usr/data/pampel/plumed-code/v2.8/install" # could also be set by some enviromental variable
+PLUMED2_LINK_MODE="shared"
+CORES=6
 
 module load vmd
 
@@ -20,7 +16,7 @@ module load vmd
 
 cd "${LAMMPS_DIR}/src"
 make lib-plumed args="-p ${PLUMED2_INSTALL_DIR} -m ${PLUMED2_LINK_MODE}"
-make yes-class2 yes-kspace yes-manybody yes-molecule yes-rigid yes-user-misc yes-user-plumed yes-user-molfile
+make yes-class2 yes-kspace yes-manybody yes-molecule yes-rigid yes-misc yes-plumed yes-molfile yes-extra-fix
 make -j $CORES mpi
 
 
@@ -31,6 +27,4 @@ echo "
 export PATH=${LAMMPS_DIR}/src:\${PATH}
 # ------------------------------------------------------------
 #
-" > ~/source_lammps.sh
-
-
+" > $STARTDIR/source_lammps.sh
