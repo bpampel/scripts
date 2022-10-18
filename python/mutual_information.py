@@ -70,7 +70,7 @@ def main():
     if len(args.files) < 2:
         raise ValueError("At least 2 files must be given")
 
-    data = [np.genfromtxt(f)[:,args.column-1] for f in args.files]
+    data = [np.genfromtxt(f)[1000000:,args.column-1] for f in args.files]
 
     n = len(data)
     mut_info = np.zeros((n,n))  # need only half the matrix but create full one

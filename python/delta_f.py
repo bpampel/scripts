@@ -120,7 +120,7 @@ def calculate_delta_F(filename, kT, masks, col):
     delta_F  : a list of doubles containing the free energy difference to the first state
     """
 
-    fes = np.genfromtxt(filename).T[col]  # assumes that last column is free energy
+    fes = np.genfromtxt(filename).T[col]  # previously assumed that last column is free energy
     if len(fes) != len(masks[0]):
         raise ValueError('Masks and FES of file {} are not of the same length ({} and {})'
                          .format(filename, len(masks[0]), len(fes)))

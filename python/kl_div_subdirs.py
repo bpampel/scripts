@@ -18,6 +18,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('path',
                         help="Path to the folder to be evaluated")
+    parser.add_argument('-s','--subfolders', nargs='+',
+                        help="Manually specify the subfolders to evaluate")
     parser.add_argument('-r', '--ref',
                         help="Path to the reference FES file",
                         required=True)
@@ -52,17 +54,24 @@ if __name__ == '__main__':
         raise ValueError("Specified dimension and dimension of reference file do not match.")
     ref = fes_to_prob(ref[args.dim], args.kT) # overwrite ref with the probabilities
 
-    # get subfolders and filenames
-    folders = hlpmisc.get_subfolders(args.path)
+    # get folders and files
+    folders = args.subfolders
     if not folders:
-        print("There are no subfolders of the form '[0-9]*' at the specified path.")
-        if args.average:
-            raise ValueError("Averaging not possible. Are you sure about the -a option?")
-        else:
-            print("Using only the FES files of the base directory.")
-            folders = [args.path]
+        folders = hlpmisc.get_subfolders(args.path)
+        if not folders:  # is empty
+            print("There are no subfolders of the form '[0-9]*' at the specified path.")
+            if args.average:
+                raise ValueError("Averaging not possible. Are you sure about the -a option?")
+            else:
+                print("Using only the FES files of the base directory.")
+                folders = [args.path]
+    for f in folders:
+        if not os.path.isdir(f):
+            raise ValueError("Could not find specified subfolder {}.".format(f))
 
-    files, times = hlpmisc.get_fesfiles(folders[0]) # assumes all folders have the same files
+    files, times = hlpmisc.get_fesfiles(folders[0])  # assumes all folders have the same files
+    if not files:
+        raise ValueError("No FES files found in first subdir. Are you sure the path is correct?")
 
     allfilenames = [os.path.join(folder, f) for folder in folders for f in files]
 
@@ -84,7 +93,7 @@ if __name__ == '__main__':
     avgheader += ("\n#! SET kT " + str(args.kT))
 
     if args.average:
-        avgfile = os.path.join(os.path.dirname(os.path.dirname(folders[0])), args.outfile) # in base dir
+        avgfile = os.path.join(args.path, args.outfile) # in base dir
         hlpmisc.backup_if_exists(avgfile)
         avg_kl = np.average(kl, axis=0)
         stddev = np.std(kl, axis=0, ddof=1)
