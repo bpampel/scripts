@@ -1,0 +1,54 @@
+#!/usr/bin/gnuplot -c
+
+# check if dir was given as argument
+directory=ARG1
+if (directory eq "") {
+  print "Error: Please specify directory as first argument"
+  exit
+}
+cd directory
+
+# Style settings
+load "~/scripts/gnuplot/style/colors.gpi"
+#set output "~/Coeffs.pdf"
+
+# Set labels
+set xlabel "Time (ns)"
+set ylabel "Coefficients (kT)"
+set notitle
+
+# Set plot range and tic options
+#set xr [0:10]
+set key top right horizontal
+
+coeffs_stride=1000
+ns_per_iteration=2.5
+#kT=0.0258
+kT=1
+
+filename='coeffs.data'
+coefflabel(i,j) = sprintf("α_{%d,%d}", i, j)
+coeffdata(i,j,k)=sprintf("< awk '$1==%d && $2==%d {print $%d}' %s", i, j, k, filename)
+
+# variables for multiplot
+imin = 1
+imax = 6
+jmin = 1
+jmax = 6
+coeffs_per_plot = 6
+
+do for [j=jmin:jmax]{
+  pl for [i=imin:imax]\
+    coeffdata(i,j,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l title coefflabel(i,j),\
+    for [i=imin:imax]\
+      coeffdata(i,j,4) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l lt ((i-imin)%coeffs_per_plot+1) lw 1 notitle
+  pause -1
+}
+
+#do for [p=0:(coeffnum/coeffs_per_plot)]{
+  #pl for [i=(p*coeffs_per_plot):((1+p)*coeffs_per_plot)-1]\
+    #coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l title coefflabel(i),\
+     #for [i=(p*coeffs_per_plot):((1+p)*coeffs_per_plot)-1]\
+      #coeffdata(i,3) u ($0*coeffs_stride*ns_per_iteration):($1/kT) w l lt (i%coeffs_per_plot+1) lw 1 notitle
+  #pause -1
+#}

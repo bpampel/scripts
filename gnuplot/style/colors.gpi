@@ -1,10 +1,12 @@
 # scheme is adapted from color brewer http://colorbrewer2.org/?type=diverging&scheme=Spectral
-array colors[10]
+array colors[11]
 
 colors[4]="#d7191c #fdae61 #abdda4 #2b83ba" # 4 different colors
 colors[5]="#d7191c #fdae61 #abdda4 #2b83ba #bf8ac7" # 5 different colors (not screen friendly)
 colors[8]="#d7191c #fdae61 #abdda4 #2b83ba #85d7191c #80fdae61 #80abdda4 #902b83ba" # 4 colors with transparent versions
 colors[10]="#d7191c #fdae61 #abdda4 #2b83ba #bf8ac7 #85d7191c #80fdae61 #80abdda4 #902b83ba #80bf8ac7" # 5 colors with transparency
+#colors[11]="#9e0142 #d53e4f #f46d43 #fdae61 #fee08b #ffffbf #e6f598 #abdda4 #66c2a5 #3288bd #5e4fa2" # full spectral colors
+colors[11]="#d7191c #fdae61 #abdda4 #2b83ba #bf8ac7 #a65628 #999999 #eeca3b #ff9da6 #72b7b2 #54a42b"
 
 num=@ARG1 # wanted color scheme
 set for [i=1:words(colors[num])] linetype i lw 3 lc rgb word(colors[num], i)
